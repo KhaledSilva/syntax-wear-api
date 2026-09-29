@@ -1,52 +1,88 @@
 // Require the framework and instantiate it
 
 // ESM
-import Fastify from 'fastify'
-import 'dotenv/config'
-import cors from '@fastify/cors'
-import helmet from '@fastify/helmet'
-import productRoutes from './routes/products.routes';
+import Fastify from "fastify";
+import "dotenv/config";
+import cors from "@fastify/cors";
+import helmet from "@fastify/helmet";
+import productRoutes from "./routes/products.routes";
+import swagger from "@fastify/swagger";
+import scalar from "@scalar/fastify-api-reference";
 
 const PORT = parseInt(process.env.PORT ?? "3000");
 
 const fastify = Fastify({
-  logger: true
-})
+  logger: true,
+});
 
 fastify.register(cors, {
   origin: true,
   credentials: true,
-})
-
-fastify.register(helmet, {
-  contentSecurityPolicy: false
 });
 
-fastify.register(productRoutes, { prefix: '/products' })
+fastify.register(helmet, {
+  contentSecurityPolicy: false,
+});
+
+fastify.register(swagger, {
+  openapi: {
+    openapi: "3.0.0",
+    info: {
+      title: "Syntax Wear API",
+      description: "API para o e-commerce Syntax Wear",
+      version: "1.0.0",
+    },
+    servers: [
+      {
+        url: `http://localhost:${PORT}`,
+        description: "Servidor de desenvolvimento",
+      },
+    ],
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: "http",
+          scheme: "bearer",
+          bearerFormat: "JWT",
+          description: "Autenticação via token JWT",
+        },
+      },
+    },
+  },
+});
+
+fastify.register(scalar, {
+  routePrefix: "/api-docs",
+  configuration: {
+    theme: "default",
+  },
+});
+
+fastify.register(productRoutes, { prefix: "/products" });
 
 // Declare a route
-fastify.get('/', async (request, reply) => {
+fastify.get("/", async (request, reply) => {
   return {
-    message: 'E-commerce Syntax',
-    version: '1.0.0',
-    status: 'running'
-  }
-})
+    message: "E-commerce Syntax",
+    version: "1.0.0",
+    status: "running",
+  };
+});
 
-fastify.get('/health', async (request, reply) => {
+fastify.get("/health", async (request, reply) => {
   return {
-    status: 'ok',
-    timestamp: new  Date().toISOString(),
-  }
-})
+    status: "ok",
+    timestamp: new Date().toISOString(),
+  };
+});
 
 // Run the server!
 fastify.listen({ port: PORT }, function (err, address) {
   if (err) {
-    fastify.log.error(err)
-    process.exit(1)
+    fastify.log.error(err);
+    process.exit(1);
   }
   // Server is now listening on ${address}
-})
+});
 
 export default fastify;
