@@ -8,11 +8,17 @@ import helmet from "@fastify/helmet";
 import productRoutes from "./routes/products.routes";
 import swagger from "@fastify/swagger";
 import scalar from "@scalar/fastify-api-reference";
+import jwt from "@fastify/jwt";
+import authRoutes from "./routes/auth.routes";
 
 const PORT = parseInt(process.env.PORT ?? "3000");
 
 const fastify = Fastify({
   logger: true,
+});
+
+fastify.register(jwt, {
+  secret: process.env.JWT_SECRET! 
 });
 
 fastify.register(cors, {
@@ -59,6 +65,7 @@ fastify.register(scalar, {
 });
 
 fastify.register(productRoutes, { prefix: "/products" });
+fastify.register(authRoutes, { prefix: "/auth" });
 
 // Declare a route
 fastify.get("/", async (request, reply) => {
