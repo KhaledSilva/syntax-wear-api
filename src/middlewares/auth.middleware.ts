@@ -4,6 +4,6 @@ export const authenticate = async (request: FastifyRequest, reply: FastifyReply)
   try {
     await request.jwtVerify();
   } catch (err) {
-    reply.status(401).send({ error: "Unauthorized" });
+    reply.status(401).send({ error: "Token inválido ou expirado" });
   }
 };
