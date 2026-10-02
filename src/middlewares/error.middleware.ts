@@ -8,8 +8,16 @@ export const errorHandler = (error: FastifyError, request: FastifyRequest, reply
       erros: z.treeifyError(error),
     });
   }
+
+  if (error.code === "FST_ERR_VALIDATION") {
+    return reply.status(400).send({
+      message: "Erro de validação (fastify)",
+      erros: error.validation,
+    });
+  }
+
   return reply.status(500).send({
     message: "Erro interno do servidor",
-    error: error.message,
+    debug: error.message,
   });
 }

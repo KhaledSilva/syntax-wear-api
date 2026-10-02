@@ -25,7 +25,7 @@ const queryBoolean = z
   .enum(["true", "false"])
   .transform((value) => value === "true");
 
-export const productListQuerySchema = z
+export const productFiltersSchema = z
   .object({
     page: z
       .string()
@@ -57,3 +57,16 @@ export const productListQuerySchema = z
       path: ["maxPrice"],
     },
   );
+
+export const createProductSchema = z
+  .object({
+    name: z.string().min(1, "Nome é obrigatório"),
+    description: z.string().min(1, "Descrição é obrigatória"),
+    price: z.number().positive("Preço deve ser um número positivo"),
+    colors: z.array(z.string()).optional(),
+    sizes: z.array(z.string()).optional(),
+    slug: z.string().min(1, "Slug é obrigatório"),
+    stock: z.number().int().nonnegative("Estoque deve ser um número inteiro não negativo").optional(),
+    active: z.boolean(),
+    imgaes: z.array(z.string()).optional(),
+  });
