@@ -1,6 +1,7 @@
 import { FastifyInstance } from "fastify";
 import {
   createNewProduct,
+  deleteExistingProduct,
   getProduct,
   listProducts,
   updateExistingProduct,
@@ -252,5 +253,32 @@ export default async function productsRoutes(fastify: FastifyInstance) {
       },
     },
     updateExistingProduct,
+  );
+
+  fastify.delete(
+    "/:id",
+    {
+      schema: {
+        tags: ["Products"],
+        description: "Excluir um produto pelo ID",
+        params: {
+          type: "object",
+          properties: {
+            id: { type: "number" },
+          },
+          required: ["id"],
+        },
+        response: {
+          200: {
+            description: "Produto removido com sucesso",
+            type: "object",
+            properties: {
+              message: { type: "string" },
+            },
+          },
+        },
+      },
+    },
+    deleteExistingProduct,
   );
 }

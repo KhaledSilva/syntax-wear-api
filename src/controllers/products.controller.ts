@@ -1,7 +1,7 @@
 import { FastifyReply, FastifyRequest } from "fastify";
 import { CreateProduct, ProductFilters } from "../types";
-import { getProducts, getProductById, createProduct, updateProduct } from "../services/products.service";
-import { createProductSchema, productFiltersSchema, updateProductSchema } from "../utils/validators";
+import { getProducts, getProductById, createProduct, updateProduct, deleteProduct } from "../services/products.service";
+import { createProductSchema, deleteProductSchema, productFiltersSchema, updateProductSchema } from "../utils/validators";
 import slugify from "slugify";
 
 export const listProducts = async (request: FastifyRequest<{ Querystring: ProductFilters }>, reply: FastifyReply,
@@ -51,4 +51,13 @@ export const updateExistingProduct = async (request: FastifyRequest<{ Params: { 
 
   const product = await updateProduct(id, validate);
   reply.status(200).send(product)
-}
+};
+
+export const deleteExistingProduct = async (request: FastifyRequest<{ Params: { id: number } }>, reply: FastifyReply) => {
+  const { id } = request.params;
+
+  const validate = deleteProductSchema.parse({ id });
+  
+  await deleteProduct(validate.id);
+  reply.status(200).send({ message: "Produto removido com sucesso" });
+};
