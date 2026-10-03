@@ -1,5 +1,10 @@
 import { FastifyInstance } from "fastify";
-import { createNewProduct, getProduct, listProducts } from "../controllers/products.controller";
+import {
+  createNewProduct,
+  getProduct,
+  listProducts,
+  updateExistingProduct,
+} from "../controllers/products.controller";
 import { authenticate } from "../middlewares/auth.middleware";
 import { properties } from "zod";
 
@@ -118,16 +123,16 @@ export default async function productsRoutes(fastify: FastifyInstance) {
             description: "Requisição inválida",
             type: "object",
             properties: {
-            message: { type: "string" },
+              message: { type: "string" },
             },
           },
           401: {
             description: "Não autorizado",
             type: "object",
             properties: {
-            message: { type: "string" },
+              message: { type: "string" },
             },
-          },  
+          },
         },
       },
     },
@@ -160,37 +165,92 @@ export default async function productsRoutes(fastify: FastifyInstance) {
             sizes: {
               type: "array",
               items: { type: "string" },
-            }
+            },
           },
-          
+        },
+      },
+    },
+    createNewProduct,
+  );
+
+  fastify.put(
+    "/:id",
+    {
+      schema: {
+        tags: ["Products"],
+        description: "Atualizar um produto existente",
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: "object",
+          properties: {
+            id: { type: "number" },
+          },
+          required: ["id"],
+        },
+        body: {
+          type: "object",
+          properties: {
+            name: { type: "string" },
+            description: { type: "string" },
+            price: { type: "number" },
+            active: { type: "boolean" },
+            stock: { type: "number" },
+            colors: {
+              type: "array",
+              items: { type: "string" },
+            },
+            images: {
+              type: "array",
+              items: { type: "string" },
+            },
+            sizes: {
+              type: "array",
+              items: { type: "string" },
+            },
+          },
         },
         response: {
-          201: {
-            description: "Produto criado com sucesso",
+          200: {
+            description: "Produto atualizado com sucesso",
             type: "object",
             properties: {
               id: { type: "number" },
               name: { type: "string" },
+              description: { type: "string", nullable: true },
               price: { type: "number" },
-              createdAt: { type: "string", format: "date-time" },
-              color: { type: "string" },
-              description: { type: "string" },
+              active: { type: "boolean" },
               stock: { type: "number" },
-              sizes: {
+              tags: {
                 type: "array",
                 items: { type: "string" },
               },
-              images: {
-                type: "array",
-                items: { type: "string", format: "uri" },
-              },
-              colors: {
-                type: "array",
-                items: { type: "string" },
-              }
             },
-          }
+          },
+          400: {
+            description: "Erro de validação",
+            type: "object",
+            properties: {
+              error: { type: "string" },
+              details: { type: "array", nullable: true },
+            },
+          },
+          404: {
+            description: "Produto não encontrado",
+            type: "object",
+            properties: {
+              error: { type: "string" },
+            },
+          },
+          401: {
+            description: "Não autorizado",
+            type: "object",
+            properties: {
+              error: { type: "string" },
+            },
+          },
         },
-      }
-    }, createNewProduct);
-  }
+      },
+    },
+    updateExistingProduct,
+  );
+}

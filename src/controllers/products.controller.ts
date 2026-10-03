@@ -1,7 +1,7 @@
 import { FastifyReply, FastifyRequest } from "fastify";
 import { CreateProduct, ProductFilters } from "../types";
-import { getProducts, getProductById, createProduct } from "../services/products.service";
-import { createProductSchema, productFiltersSchema } from "../utils/validators";
+import { getProducts, getProductById, createProduct, updateProduct } from "../services/products.service";
+import { createProductSchema, productFiltersSchema, updateProductSchema } from "../utils/validators";
 import slugify from "slugify";
 
 export const listProducts = async (request: FastifyRequest<{ Querystring: ProductFilters }>, reply: FastifyReply,
@@ -33,4 +33,22 @@ export const createNewProduct = async (request: FastifyRequest<{ Body: CreatePro
   await createProduct(validate);
 
   reply.status(201).send({ message: "Produto criado com sucesso" });
+}
+
+export const updateExistingProduct = async (request: FastifyRequest<{ Params: { id: number }; Body: Partial<CreateProduct> }>, reply: FastifyReply) => {
+  const { id } = request.params;
+  const body = request.body;
+
+  const validate = updateProductSchema.parse(body);
+
+  if (validate.name) {
+    validate.slug = slugify(validate.name, { 
+      lower: true,
+      strict: true,
+      locale: "pt"
+    });
+  }
+
+  const product = await updateProduct(id, validate);
+  reply.status(200).send(product)
 }

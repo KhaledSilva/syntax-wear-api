@@ -33,7 +33,16 @@ export interface CreateProduct {
     colors?: string[];
     sizes?: string[];
     slug: string;
+    stock: number;
+    active: boolean;
+    images?: string[];
+}
+
+export interface UpdateProduct extends Partial<CreateProduct> {
+    name?: string;
+    description?: string;
+    price?: number;
+    slug?: string;
     stock?: number;
     active?: boolean;
-    images?: string[];
 }

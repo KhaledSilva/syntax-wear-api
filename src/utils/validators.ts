@@ -66,7 +66,20 @@ export const createProductSchema = z
     colors: z.array(z.string()).optional(),
     sizes: z.array(z.string()).optional(),
     slug: z.string().min(1, "Slug é obrigatório"),
-    stock: z.number().int().nonnegative("Estoque deve ser um número inteiro não negativo").optional(),
+    stock: z.number().int().nonnegative("Estoque deve ser um número inteiro não negativo"),
     active: z.boolean(),
-    imgaes: z.array(z.string()).optional(),
+    images: z.array(z.string()).optional(),
+  });
+
+  export const updateProductSchema = z
+  .object({
+    name: z.string().min(1, "Nome é obrigatório").optional(),
+    description: z.string().min(1, "Descrição é obrigatória").optional(),
+    price: z.number().positive("Preço deve ser um número positivo").optional(),
+    colors: z.array(z.string()).optional(),
+    sizes: z.array(z.string()).optional(),
+    slug: z.string().min(1, "Slug é obrigatório").optional(),
+    stock: z.number().int().nonnegative("Estoque deve ser um número inteiro não negativo").optional(),
+    active: z.boolean().optional(),
+    images: z.array(z.string()).optional(),
   });
