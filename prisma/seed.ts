@@ -11,133 +11,294 @@ if (!connectionString) {
 const adapter = new PrismaPg({ connectionString });
 const prisma = new PrismaClient({ adapter });
 
+const categories = [
+	{
+		name: "Camisetas",
+		slug: "camisetas",
+		description: "Camisetas casuais e estilosas para o dia a dia.",
+		active: true,
+	},
+	{
+		name: "Moletons",
+		slug: "moletons",
+		description: "Moletons confortáveis para dias mais frios.",
+		active: true,
+	},
+	{
+		name: "Calças",
+		slug: "calcas",
+		description: "Calças modernas para diferentes estilos.",
+		active: true,
+	},
+	{
+		name: "Jaquetas",
+		slug: "jaquetas",
+		description: "Jaquetas leves e resistentes.",
+		active: true,
+	},
+	{
+		name: "Shorts",
+		slug: "shorts",
+		description: "Shorts confortáveis para momentos casuais.",
+		active: true,
+	},
+	{
+		name: "Bonés",
+		slug: "bones",
+		description: "Bonés para complementar diferentes looks.",
+		active: true,
+	},
+	{
+		name: "Acessórios",
+		slug: "acessorios",
+		description: "Acessórios para completar seu estilo.",
+		active: true,
+	},
+];
+
 const products = [
 	{
-		name: "Camiseta Syntax Classic",
-		slug: "camiseta-syntax-classic",
-		description: "Camiseta essencial em algodao, com modelagem regular e logo discreto.",
+		name: "Camiseta Urban Code",
+		slug: "camiseta-urban-code",
+		description:
+			"Camiseta de algodão com modelagem confortável e estampa minimalista.",
+		price: 79.9,
+		images: [],
+		sizes: ["P", "M", "G", "GG"],
+		colors: ["Preto", "Branco", "Cinza"],
+		stock: 35,
+		active: true,
+		categorySlug: "camisetas",
+	},
+	{
+		name: "Camiseta Dark Mode",
+		slug: "camiseta-dark-mode",
+		description:
+			"Camiseta preta com visual moderno e acabamento confortável.",
 		price: 89.9,
 		images: [],
 		sizes: ["P", "M", "G", "GG"],
-		colors: ["Preto", "Branco"],
-		stock: 40,
-		active: true,
-	},
-	{
-		name: "Camiseta Oversized Code",
-		slug: "camiseta-oversized-code",
-		description: "Camiseta oversized de toque macio para um visual casual.",
-		price: 119.9,
-		images: [],
-		sizes: ["P", "M", "G", "GG"],
-		colors: ["Preto", "Cinza"],
-		stock: 25,
-		active: true,
-	},
-	{
-		name: "Moletom Syntax Hoodie",
-		slug: "moletom-syntax-hoodie",
-		description: "Moletom com capuz, bolso frontal e interior felpado.",
-		price: 229.9,
-		images: [],
-		sizes: ["P", "M", "G", "GG"],
 		colors: ["Preto", "Verde"],
-		stock: 18,
+		stock: 28,
 		active: true,
+		categorySlug: "camisetas",
 	},
 	{
-		name: "Calca Jogger Dev",
-		slug: "calca-jogger-dev",
-		description: "Calca jogger confortavel com cintura ajustavel e bolsos laterais.",
-		price: 179.9,
+		name: "Camiseta Minimal",
+		slug: "camiseta-minimal",
+		description:
+			"Camiseta básica com design minimalista para diferentes ocasiões.",
+		price: 69.9,
+		images: [],
+		sizes: ["P", "M", "G", "GG"],
+		colors: ["Branco", "Azul", "Preto"],
+		stock: 42,
+		active: true,
+		categorySlug: "camisetas",
+	},
+	{
+		name: "Moletom Dev Club",
+		slug: "moletom-dev-club",
+		description:
+			"Moletom confortável com capuz e bolso frontal.",
+		price: 189.9,
 		images: [],
 		sizes: ["P", "M", "G", "GG"],
 		colors: ["Preto", "Cinza"],
 		stock: 20,
 		active: true,
+		categorySlug: "moletons",
 	},
 	{
-		name: "Boné Syntax Five Panel",
-		slug: "bone-syntax-five-panel",
-		description: "Bone five panel com fechamento regulavel e bordado frontal.",
-		price: 79.9,
+		name: "Moletom Night Shift",
+		slug: "moletom-night-shift",
+		description:
+			"Moletom pesado e confortável para os dias mais frios.",
+		price: 219.9,
 		images: [],
-		sizes: ["Unico"],
-		colors: ["Preto", "Bege"],
-		stock: 32,
+		sizes: ["M", "G", "GG"],
+		colors: ["Preto", "Marrom"],
+		stock: 15,
 		active: true,
+		categorySlug: "moletons",
 	},
 	{
-		name: "Camiseta Minimal Terminal",
-		slug: "camiseta-minimal-terminal",
-		description: "Camiseta de algodao com estampa minimalista inspirada no terminal.",
+		name: "Calça Cargo Tech",
+		slug: "calca-cargo-tech",
+		description:
+			"Calça cargo com bolsos laterais e tecido resistente.",
+		price: 199.9,
+		images: [],
+		sizes: ["36", "38", "40", "42", "44"],
+		colors: ["Preto", "Verde Militar"],
+		stock: 18,
+		active: true,
+		categorySlug: "calcas",
+	},
+	{
+		name: "Calça Jogger Essential",
+		slug: "calca-jogger-essential",
+		description:
+			"Calça jogger confortável para um visual casual.",
+		price: 159.9,
+		images: [],
+		sizes: ["P", "M", "G", "GG"],
+		colors: ["Preto", "Cinza"],
+		stock: 25,
+		active: true,
+		categorySlug: "calcas",
+	},
+	{
+		name: "Jaqueta Explorer",
+		slug: "jaqueta-explorer",
+		description:
+			"Jaqueta leve para dias frios e atividades ao ar livre.",
+		price: 279.9,
+		images: [],
+		sizes: ["P", "M", "G", "GG"],
+		colors: ["Preto", "Azul-marinho"],
+		stock: 12,
+		active: true,
+		categorySlug: "jaquetas",
+	},
+	{
+		name: "Jaqueta Street",
+		slug: "jaqueta-street",
+		description:
+			"Jaqueta urbana com fechamento em zíper e design moderno.",
+		price: 249.9,
+		images: [],
+		sizes: ["M", "G", "GG"],
+		colors: ["Preto", "Bege"],
+		stock: 10,
+		active: true,
+		categorySlug: "jaquetas",
+	},
+	{
+		name: "Shorts Performance",
+		slug: "shorts-performance",
+		description:
+			"Shorts leve e confortável para atividades físicas.",
 		price: 99.9,
 		images: [],
 		sizes: ["P", "M", "G", "GG"],
-		colors: ["Branco", "Azul-marinho"],
-		stock: 28,
+		colors: ["Preto", "Cinza"],
+		stock: 30,
 		active: true,
+		categorySlug: "shorts",
 	},
 	{
-		name: "Jaqueta Windbreaker Commit",
-		slug: "jaqueta-windbreaker-commit",
-		description: "Jaqueta leve corta-vento com capuz e fechamento em ziper.",
-		price: 259.9,
+		name: "Shorts Casual",
+		slug: "shorts-casual",
+		description:
+			"Shorts casual com tecido leve para o dia a dia.",
+		price: 89.9,
 		images: [],
 		sizes: ["P", "M", "G", "GG"],
+		colors: ["Bege", "Preto", "Verde"],
+		stock: 22,
+		active: true,
+		categorySlug: "shorts",
+	},
+	{
+		name: "Boné Classic",
+		slug: "bone-classic",
+		description:
+			"Boné clássico com ajuste traseiro e logo frontal.",
+		price: 59.9,
+		images: [],
+		sizes: ["Único"],
+		colors: ["Preto", "Branco"],
+		stock: 40,
+		active: true,
+		categorySlug: "bones",
+	},
+	{
+		name: "Boné Street",
+		slug: "bone-street",
+		description:
+			"Boné urbano com visual moderno e fechamento ajustável.",
+		price: 69.9,
+		images: [],
+		sizes: ["Único"],
 		colors: ["Preto", "Verde"],
-		stock: 12,
+		stock: 25,
 		active: true,
+		categorySlug: "bones",
 	},
 	{
-		name: "Shorts Training Loop",
-		slug: "shorts-training-loop",
-		description: "Shorts versatil com tecido leve, cordao interno e bolsos.",
-		price: 109.9,
+		name: "Meias Everyday",
+		slug: "meias-everyday",
+		description:
+			"Kit com três pares de meias confortáveis para o dia a dia.",
+		price: 39.9,
 		images: [],
-		sizes: ["P", "M", "G", "GG"],
-		colors: ["Preto", "Cinza", "Azul-marinho"],
-		stock: 24,
+		sizes: ["Único"],
+		colors: ["Preto", "Branco", "Cinza"],
+		stock: 60,
 		active: true,
-	},
-	{
-		name: "Meias Syntax Pack",
-		slug: "meias-syntax-pack",
-		description: "Kit com tres pares de meias de cano medio em algodao.",
-		price: 49.9,
-		images: [],
-		sizes: ["Unico"],
-		colors: ["Preto", "Branco"],
-		stock: 50,
-		active: true,
-	},
-	{
-		name: "Camiseta Longline Stack",
-		slug: "camiseta-longline-stack",
-		description: "Camiseta longline com barra alongada e caimento contemporaneo.",
-		price: 109.9,
-		images: [],
-		sizes: ["P", "M", "G", "GG"],
-		colors: ["Preto", "Branco"],
-		stock: 16,
-		active: true,
+		categorySlug: "acessorios",
 	},
 ];
 
 async function main() {
-	for (const product of products) {
-		await prisma.product.upsert({
-			where: { slug: product.slug },
-			update: product,
-			create: product,
+	console.log("🌱 Iniciando seed...");
+
+	// 1. Criar categorias
+	for (const category of categories) {
+		await prisma.category.upsert({
+			where: {
+				slug: category.slug,
+			},
+			update: {
+				name: category.name,
+				description: category.description,
+				active: category.active,
+			},
+			create: category,
 		});
 	}
 
-	console.info(`${products.length} produtos inseridos ou atualizados.`);
+	console.log(`✅ ${categories.length} categorias criadas/atualizadas.`);
+
+	// 2. Criar produtos
+	for (const product of products) {
+		const category = await prisma.category.findUnique({
+			where: {
+				slug: product.categorySlug,
+			},
+		});
+
+		if (!category) {
+			throw new Error(
+				`Categoria "${product.categorySlug}" não encontrada.`
+			);
+		}
+
+		const { categorySlug, ...productData } = product;
+
+		await prisma.product.upsert({
+			where: {
+				slug: product.slug,
+			},
+			update: {
+				...productData,
+				categoryId: category.id,
+			},
+			create: {
+				...productData,
+				categoryId: category.id,
+			},
+		});
+	}
+
+	console.log(`✅ ${products.length} produtos criados/atualizados.`);
+	console.log("🌱 Seed executado com sucesso!");
 }
 
 main()
 	.catch((error: unknown) => {
+		console.error("❌ Erro ao executar seed:");
 		console.error(error);
 		process.exitCode = 1;
 	})

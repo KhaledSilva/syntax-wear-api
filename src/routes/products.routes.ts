@@ -7,7 +7,6 @@ import {
   updateExistingProduct,
 } from "../controllers/products.controller";
 import { authenticate } from "../middlewares/auth.middleware";
-import { properties } from "zod";
 
 export default async function productsRoutes(fastify: FastifyInstance) {
   // fastify.addHook("onRequest", authenticate);
