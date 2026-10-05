@@ -1,7 +1,30 @@
 import { prisma } from "../utils/prisma"
 import { CreateProduct, ProductFilters } from "../types"
 
-export const getProducts = async (filter: ProductFilters) => {
+type ProductCategoryInput = {
+    categoryId?: number;
+};
+
+type ProductFiltersWithCategory = ProductFilters & {
+    categoryId?: number;
+};
+
+const ensureCategoryExists = async (categoryId: number | undefined) => {
+    if (categoryId === undefined) {
+        return;
+    }
+
+    const category = await prisma.category.findUnique({
+        where: { id: categoryId },
+        select: { id: true },
+    });
+
+    if (!category) {
+        throw new Error("Categoria não encontrada");
+    }
+};
+
+export const getProducts = async (filter: ProductFiltersWithCategory) => {
     const {
         page: requestedPage = 1,
         limit: requestedLimit = 20,
@@ -12,6 +35,7 @@ export const getProducts = async (filter: ProductFilters) => {
         size,
         active,
         inStock,
+        categoryId,
         sortBy = "createdAt",
         sortOrder = "desc",
     } = filter;
@@ -38,6 +62,7 @@ export const getProducts = async (filter: ProductFilters) => {
     if (color) where.colors = { has: color };
     if (size) where.sizes = { array_contains: [size] };
     if (active !== undefined) where.active = active;
+    if (categoryId !== undefined) where.categoryId = categoryId;
     if (inStock !== undefined) {
         where.stock = inStock ? { gt: 0 } : { lte: 0 };
     }
@@ -53,6 +78,9 @@ export const getProducts = async (filter: ProductFilters) => {
 export const getProductById = async (id: number) => {
     const product = await prisma.product.findUnique({
         where: { id },
+        include: { 
+            category: true 
+        },
     })
 
     if (!product) {
@@ -61,7 +89,7 @@ export const getProductById = async (id: number) => {
     return product;
 }
 
-export const createProduct = async (data: CreateProduct) => {
+export const createProduct = async (data: CreateProduct & ProductCategoryInput) => {
     const existingProduct = await prisma.product.findUnique({
         where: { slug: data.slug },
     });
@@ -69,11 +97,24 @@ export const createProduct = async (data: CreateProduct) => {
     if (existingProduct) {
         throw new Error("Slug já existe. Escolha outro nome para o produto");
     }
-    const newProduct = await prisma.product.create({data});
+
+    if (data.categoryId === undefined) {
+        throw new Error("Categoria é obrigatória para criar um produto");
+    }
+
+    await ensureCategoryExists(data.categoryId);
+
+    const { categoryId, ...productData } = data;
+    const newProduct = await prisma.product.create({
+        data: {
+            ...productData,
+            category: { connect: { id: categoryId } },
+        },
+    });
     return newProduct;
 }
 
-export const updateProduct = async (id: number, data: Partial<CreateProduct>) => {
+export const updateProduct = async (id: number, data: Partial<CreateProduct> & ProductCategoryInput) => {
     const existingProduct = await prisma.product.findUnique({
         where: { id },
     });
@@ -92,9 +133,18 @@ export const updateProduct = async (id: number, data: Partial<CreateProduct>) =>
         }
     }
 
+    await ensureCategoryExists(data.categoryId);
+
+    const { categoryId, ...productData } = data;
+
     const updatedProduct = await prisma.product.update({
         where: { id },
-        data,
+        data: {
+            ...productData,
+            ...(categoryId !== undefined && {
+                category: { connect: { id: categoryId } },
+            }),
+        },
     });
 
     return updatedProduct;

@@ -30,6 +30,7 @@ export interface CreateProduct {
     name: string;
     description: string;
     price: number;
+    categoryId: number;
     colors?: string[];
     sizes?: string[];
     slug: string;

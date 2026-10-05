@@ -6,6 +6,7 @@ import "dotenv/config";
 import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
 import productRoutes from "./routes/products.routes";
+import categoriesRoutes from "./routes/categories.routes";
 import swagger from "@fastify/swagger";
 import scalar from "@scalar/fastify-api-reference";
 import jwt from "@fastify/jwt";
@@ -67,6 +68,7 @@ fastify.register(scalar, {
 });
 
 fastify.register(productRoutes, { prefix: "/products" });
+fastify.register(categoriesRoutes, { prefix: "/categories" });
 fastify.register(authRoutes, { prefix: "/auth" });
 
 // Declare a route

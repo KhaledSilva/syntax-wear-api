@@ -7,6 +7,7 @@ import {
   updateExistingProduct,
 } from "../controllers/products.controller";
 import { authenticate } from "../middlewares/auth.middleware";
+import { number } from "zod";
 
 export default async function productsRoutes(fastify: FastifyInstance) {
   // fastify.addHook("onRequest", authenticate);
@@ -117,6 +118,18 @@ export default async function productsRoutes(fastify: FastifyInstance) {
               slug: { type: "string" },
               active: { type: "boolean" },
               updatedAt: { type: "string", format: "date-time" },
+              categoryId: { type: "number" },
+              category: { type: "object",
+                properties: {
+                  id: { type: "number" },
+                  name: { type: "string" },
+                  slug: { type: "string" },
+                  description: { type: "string", nullable: true },
+                  active: { type: "boolean" },
+                  createdAt: { type: "string", format: "date-time" },
+                  updatedAt: { type: "string", format: "date-time" },
+                },
+               },
             },
           },
           400: {
@@ -145,13 +158,15 @@ export default async function productsRoutes(fastify: FastifyInstance) {
       schema: {
         tags: ["Products"],
         description: "Criar um novo produto",
-        required: ["name", "description", "price", "slug", "active", "stock"],
+        required: ["name", "description", "price", "categoryId", "active", "stock"],
         body: {
           type: "object",
+          required: ["name", "description", "price", "categoryId", "active", "stock"],
           properties: {
             name: { type: "string" },
             description: { type: "string" },
             price: { type: "number" },
+            categoryId: { type: "integer", minimum: 1 },
             active: { type: "boolean" },
             stock: { type: "number" },
             colors: {
@@ -193,6 +208,7 @@ export default async function productsRoutes(fastify: FastifyInstance) {
             name: { type: "string" },
             description: { type: "string" },
             price: { type: "number" },
+            categoryId: { type: "number" },
             active: { type: "boolean" },
             stock: { type: "number" },
             colors: {
