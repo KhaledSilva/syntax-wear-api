@@ -4,74 +4,78 @@ Este documento descreve a implementação atual do backend, organizado em Node.j
 
 ## Visão geral
 
-A API atende o e-commerce Syntax Wear e atualmente implementa:
+A API do e-commerce Syntax Wear implementa, até o momento, os módulos centrais de catálogo e autenticação:
 
-- consulta, criação, atualização e desativação de produtos;
-- cadastro e login de usuários com senha criptografada e token JWT;
+- consulta, criação, atualização e desativação lógica de produtos;
+- cadastro e autenticação de usuários com senha criptografada e JWT;
+- gestão de categorias com slug e ativação lógica;
 - persistência em PostgreSQL por meio do Prisma;
 - documentação OpenAPI servida pelo Scalar.
 
-O fluxo de uma requisição é, em geral:
+O fluxo de uma requisição segue a convenção do Fastify:
 
-1. O Fastify recebe a requisição e aplica os hooks/plugins registrados.
-2. As rotas encaminham a requisição para um controller.
-3. O controller valida os dados de entrada com Zod e chama um service.
-4. O service aplica as regras de negócio e consulta ou altera os dados via Prisma.
-5. O controller monta a resposta HTTP.
-6. Erros não tratados são encaminhados ao error handler global.
+1. o Fastify recebe a requisição e aplica os plugins e hooks registrados;
+2. a rota encaminha para o controller correspondente;
+3. o controller valida os dados de entrada com Zod e delega a operação ao service;
+4. o service aplica regras de negócio e persiste/consulta dados com Prisma;
+5. o controller monta a resposta HTTP;
+6. erros não tratados são enviados para o error handler global.
 
 ## Estrutura principal
 
 | Caminho | Responsabilidade |
 | --- | --- |
-| `src/app.ts` | Configura e inicia o Fastify, registra plugins e rotas e define os endpoints de status e o error handler. |
-| `src/routes/products.routes.ts` | Declara os endpoints de produtos, schemas usados na documentação e hook de autenticação do grupo. |
-| `src/routes/auth.routes.ts` | Declara cadastro e login. |
-| `src/controllers/products.controller.ts` | Valida dados recebidos, prepara slug, chama os services de produto e define as respostas HTTP. |
-| `src/controllers/auth.controller.ts` | Valida cadastro/login, chama os services de autenticação e emite tokens JWT. |
-| `src/services/products.service.ts` | Contém consultas, filtros, paginação e regras de criação, atualização e desativação de produtos. |
-| `src/services/auth.service.ts` | Cria usuários, verifica email e senha e usa bcrypt para armazenar/verificar senhas. |
-| `src/utils/validators.ts` | Define schemas Zod para autenticação, produtos e filtros. |
-| `src/types/index.ts` | Define tipos TypeScript compartilhados para produtos, filtros e autenticação. |
-| `src/utils/prisma.ts` | Cria e exporta o Prisma Client com o adaptador PostgreSQL. |
+| `src/app.ts` | Configura o Fastify, registra plugins, rotas e endpoints de saúde, além do error handler global. |
+| `src/routes/products.routes.ts` | Declara os endpoints de produtos, documentação OpenAPI e parâmetros de filtro. |
+| `src/routes/categories.routes.ts` | Declara os endpoints de categorias com CRUD e documentação de respostas. |
+| `src/routes/auth.routes.ts` | Declara `register` e `login` da API. |
+| `src/controllers/products.controller.ts` | Valida dados de entrada dos produtos, prepara slug, chama services e define respostas HTTP. |
+| `src/controllers/categories.controller.ts` | Encapsula validação e execução do CRUD de categoria. |
+| `src/controllers/auth.controller.ts` | Valida cadastro e login, gera token JWT e formata resposta. |
+| `src/services/products.service.ts` | Implementa listagem, filtros, paginação, criação, atualização e desativação lógica de produtos. |
+| `src/services/categories.service.ts` | Implementa consulta, criação, atualização e desativação lógica de categorias. |
+| `src/services/auth.service.ts` | Cria usuários, verifica email e senha e usa `bcrypt` para hash/verificação. |
+| `src/utils/validators.ts` | Define schemas Zod para autenticação, categorias, produtos e filtros. |
+| `src/types/index.ts` | Define tipos TypeScript compartilhados para produtos, categorias, filtros e autenticação. |
+| `src/utils/prisma.ts` | Cria e exporta o cliente Prisma com o datasource do PostgreSQL. |
 | `src/middlewares/auth.middleware.ts` | Verifica o JWT recebido na requisição. |
 | `src/middlewares/error.middleware.ts` | Converte erros de validação e erros não tratados em respostas HTTP. |
-| `prisma/schema.prisma` | Define os modelos e tipos persistidos no banco. |
-| `prisma/migrations/` | Guarda o histórico de alterações do schema do banco. |
+| `prisma/schema.prisma` | Define os modelos e enums persistidos no banco. |
+| `prisma/migrations/` | Guarda o histórico de evolução do schema. |
 | `prisma/seed.ts` | Insere ou atualiza produtos de exemplo usando `upsert` pelo slug. |
-| `prisma.config.ts` | Configura o caminho do schema, das migrations e a URL do datasource para o Prisma. |
-| `.env.example` | Lista as variáveis de ambiente esperadas como referência. |
-| `docs/PRD-backend.md` | Registra a visão de produto e funcionalidades planejadas. |
+| `prisma.config.ts` | Configura schema, migrations e datasource do Prisma. |
+| `.env.example` | Lista as variáveis esperadas pela aplicação. |
+| `docs/PRD-backend.md` | Documenta o produto, requisitos previstos e extensão do projeto. |
 
-## Produtos: CRUD e comportamento
+## Produtos: CRUD, filtros e categoria
 
-As rotas são registradas com o prefixo `/products` em `src/app.ts`.
+As rotas de produtos ficam no prefixo `/products` em `src/app.ts`.
 
 | Método | Caminho | Finalidade | Comportamento de sucesso |
 | --- | --- | --- | --- |
-| `GET` | `/products` | Lista produtos; aceita filtros e paginação. | `200` com a lista. |
-| `GET` | `/products/:id` | Busca um produto pelo ID. | `200` com o produto. |
+| `GET` | `/products` | Lista produtos com filtros e paginação. | `200` com a lista. |
+| `GET` | `/products/:id` | Busca um produto pelo ID. | `200` com o produto e categoria associada. |
 | `POST` | `/products` | Cria um produto. | `201` com mensagem de sucesso. |
 | `PUT` | `/products/:id` | Atualiza os campos enviados. | `200` com o produto atualizado. |
 | `DELETE` | `/products/:id` | Desativa o produto. | `200` com mensagem de sucesso. |
 
 ### Fluxo de criação
 
-1. `createNewProduct` gera o slug a partir do nome com `slugify` (minúsculas, formato estrito e locale `pt`).
-2. `createProductSchema` valida os campos.
+1. `createNewProduct` gera o slug a partir do nome com `slugify` (`lower: true`, `strict: true`, locale `pt`).
+2. `createProductSchema` valida os campos, incluindo `categoryId`.
 3. `createProduct` verifica se o slug já existe e cria o registro.
 4. O controller responde com status `201`.
 
 ### Fluxo de atualização
 
 1. `updateExistingProduct` valida o body com `updateProductSchema`.
-2. Se o nome foi informado, recalcula o slug.
-3. `updateProduct` verifica se o produto existe e se o slug não pertence a outro produto.
+2. Se `name` foi informado, recalcula o slug.
+3. `updateProduct` verifica se o produto existe e se o slug não pertence a outro registro.
 4. O registro é atualizado e retornado.
 
 ### Fluxo de exclusão
 
-Apesar do verbo HTTP `DELETE`, a implementação é uma exclusão lógica: `deleteProduct` localiza o registro e define `active: false`. O registro continua no banco e não é apagado fisicamente. A listagem não exclui automaticamente produtos inativos; use o filtro `active=true` para limitar os resultados aos ativos.
+A exclusão é lógica: `deleteProduct` localiza o registro e define `active: false`. O registro continua no banco e não é apagado fisicamente. A listagem sem filtro pode continuar incluindo esse item; para filtrar somente ativos, use `active=true`.
 
 ### Filtros de listagem
 
@@ -81,25 +85,39 @@ Apesar do verbo HTTP `DELETE`, a implementação é uma exclusão lógica: `dele
 | --- | --- |
 | `page` | Página, inteiro a partir de 1; padrão `1`. |
 | `limit` | Itens por página, de 1 a 100; padrão `20`. |
-| `minPrice`, `maxPrice` | Limites inclusivos de preço; o mínimo não pode superar o máximo. |
+| `minPrice`, `maxPrice` | Limites inclusivos de preço. |
 | `search` | Busca sem distinção entre maiúsculas/minúsculas em nome, descrição ou slug. |
 | `color` | Filtra por uma cor contida no array `colors`. |
 | `size` | Filtra por um tamanho contido no JSON `sizes`. |
-| `active` | Filtra pelo estado ativo, com `true` ou `false`. |
+| `active` | Filtra pelo estado ativo (`true`/`false`). |
 | `inStock` | `true` exige estoque maior que zero; `false` considera estoque zero ou negativo. |
 | `sortBy` | Ordenação por `price`, `name` ou `createdAt`. |
 | `sortOrder` | Direção `asc` ou `desc`; padrão `desc`. |
 
-A paginação é aplicada no service com `skip` e `take`. Os valores de página e limite também são limitados no service como proteção adicional.
+A paginação é aplicada no service com `skip` e `take`, com validação adicional de limites.
+
+## Categorias: CRUD e relacionamento
+
+O módulo de categorias já foi implementado e está acessível no prefixo `/categories`.
+
+| Método | Caminho | Finalidade | Comportamento de sucesso |
+| --- | --- | --- | --- |
+| `GET` | `/categories` | Lista todas as categorias ativas e ordenadas por nome. | `200` com a lista. |
+| `GET` | `/categories/:id` | Busca uma categoria pelo ID. | `200` com a categoria. |
+| `POST` | `/categories` | Cria uma nova categoria. | `201` com mensagem de sucesso. |
+| `PUT` | `/categories/:id` | Atualiza os campos enviados. | `200` com a categoria atualizada. |
+| `DELETE` | `/categories/:id` | Desativa a categoria. | `200` com mensagem de sucesso. |
+
+A criação e atualização também geram `slug` com `slugify` e validam unicidade do valor. A exclusão segue o mesmo padrão do produto: `active: false` em vez de remoção física.
 
 ## Autenticação
 
-As rotas de autenticação são registradas com o prefixo `/auth`.
+As rotas de autenticação são registradas com prefixo `/auth`.
 
 | Método | Caminho | Finalidade |
 | --- | --- | --- |
-| `POST` | `/auth/register` | Cadastra um usuário e retorna usuário e JWT. |
-| `POST` | `/auth/login` | Verifica email/senha e retorna usuário e JWT. |
+| `POST` | `/auth/register` | Cadastra um usuário e retorna usuário + JWT. |
+| `POST` | `/auth/login` | Verifica email/senha e retorna usuário + JWT. |
 
 No cadastro, o service verifica se o email já existe, aplica `bcrypt.hash` com fator `10` e persiste o usuário com papel `USER`. No login, compara a senha informada com o hash usando `bcrypt.compare`. O controller emite um token pelo plugin `@fastify/jwt`, contendo `userId`.
 
@@ -108,6 +126,26 @@ O middleware `authenticate` chama `request.jwtVerify()`. Se a verificação falh
 ## Modelo de dados Prisma
 
 O datasource é PostgreSQL. Os modelos atuais são:
+
+### `User`
+
+- `id`: identificador inteiro autoincremental.
+- `firstName`, `lastName`, `email`, `password`: dados da conta; email é único.
+- `cpf`: opcional e único quando preenchido.
+- `phone`, `birthDate`: opcionais.
+- `createdAt`: data de criação.
+- `role`: enum `USER` ou `ADMIN`, padrão `USER`.
+
+### `Category`
+
+- `id`: identificador inteiro autoincremental.
+- `name`: nome da categoria.
+- `slug`: slug único e indexado.
+- `description`: texto opcional.
+- `active`: booleano, padrão `true`.
+- `createdAt`: timestamp de criação.
+- `updatedAt`: timestamp de atualização automática pelo Prisma.
+- `products`: relação com os produtos vinculados à categoria.
 
 ### `Product`
 
@@ -120,18 +158,11 @@ O datasource é PostgreSQL. Os modelos atuais são:
 - `stock`: inteiro, padrão `0`.
 - `active`: booleano, padrão `true`.
 - `createdAt`: data de criação.
-- `updatedAt`: data atualizado automaticamente pelo Prisma.
+- `updatedAt`: data de atualização automática pelo Prisma.
+- `category`: relacionamento obrigatório com `Category`.
+- `categoryId`: chave estrangeira da categoria do produto.
 
-### `User`
-
-- `id`: identificador inteiro autoincremental.
-- `firstName`, `lastName`, `email`, `password`: dados da conta; email é único.
-- `cpf`: opcional e único quando preenchido.
-- `phone`, `birthDate`: opcionais.
-- `createdAt`: data de criação.
-- `role`: enum `USER` ou `ADMIN`, padrão `USER`.
-
-As migrations registram a criação das tabelas, a inclusão de `colors` em produtos e a inclusão do papel do usuário. O schema é a referência declarativa atual; migrations registram sua evolução no banco.
+As migrations registram a criação das tabelas, a inclusão de `colors` em produtos, a criação de `Category` e o vínculo entre `Product` e `Category`. O schema é a referência declarativa atual; as migrations continuam registrando a evolução do banco.
 
 ## Validação e tipos
 
@@ -139,9 +170,9 @@ Os schemas Zod em `src/utils/validators.ts` definem validação de:
 
 - email e tamanho mínimo de senha para login/cadastro;
 - campos obrigatórios e formatos básicos dos dados de usuário;
-- criação e atualização de produto;
+- criação e atualização de produto e categoria;
 - filtros de listagem, incluindo conversão de query strings para números e booleanos;
-- ID usado na exclusão de produto.
+- ID usado na exclusão de produto e categoria.
 
 `src/types/index.ts` define tipos de compile-time, como `CreateProduct`, `ProductFilters`, `AuthRequest` e `RegisterRequest`. Esses tipos ajudam o TypeScript, mas não substituem a validação em runtime do Zod.
 
@@ -150,7 +181,7 @@ Os schemas Zod em `src/utils/validators.ts` definem validação de:
 1. Instale as dependências com `npm install`.
 2. Copie `.env.example` para `.env` e configure os valores reais:
    - `DATABASE_URL`: conexão PostgreSQL;
-   - `JWT_SECRET`: segredo usado para assinar/verificar JWT;
+   - `JWT_SECRET`: segredo usado para assinar e verificar JWT;
    - `PORT`: porta HTTP (padrão `3000` no código).
 3. Gere o Prisma Client com `npm run prisma:generate`.
 4. Aplique migrations no banco de desenvolvimento com `npm run prisma:migrate`.
@@ -163,7 +194,7 @@ Comandos disponíveis em `package.json`:
 | --- | --- |
 | `npm run dev` | Executa `src/app.ts` com `tsx watch`. |
 | `npm run build` | Compila TypeScript para `dist/`. |
-| `npm run start` | Executa `node dist/server.js`. |
+| `npm run start` | Executa o build em ambiente de produção. |
 | `npm run prisma:generate` | Gera o cliente Prisma. |
 | `npm run prisma:migrate` | Executa `prisma migrate dev`. |
 | `npm run prisma:studio` | Abre o Prisma Studio. |
@@ -173,15 +204,17 @@ O endereço de documentação OpenAPI/Scalar é `/api-docs`. Também existem `GE
 
 ## Comportamentos e pontos de atenção observados
 
-- O hook `onRequest` de autenticação está registrado no plugin de rotas de produtos, então atualmente **todas** as rotas `/products` exigem JWT, inclusive consultas. A autenticação só verifica a validade do token; não há autorização por papel `ADMIN` nas rotas.
-- A documentação OpenAPI declara `security` na rota `PUT`, mas o hook acima protege todo o grupo. Portanto, a documentação interativa não representa completamente a proteção efetiva das rotas.
-- O `DELETE` desativa o produto, mas a resposta o descreve como removido. Não é uma remoção física, e a listagem sem filtro pode continuar incluindo esse registro.
-- O service de autenticação retorna o registro completo do usuário, e os controllers o incluem na resposta. Como o modelo contém o campo `password` (hash bcrypt), esse campo pode ser enviado ao cliente; revise a projeção dos dados retornados antes de expor o endpoint em produção.
-- O error handler trata validações como `400`, mas os outros erros não tratados viram `500` e incluem `error.message` em `debug`. Isso inclui casos como usuário/produto inexistente e email duplicado, que atualmente não têm mapeamento dedicado para `404`/`409`; a mensagem técnica também é enviada ao cliente.
-- O schema do produto armazena `price` como Prisma `Decimal`, enquanto tipos/schemas de rota descrevem o preço como número. Confirme a serialização esperada pelo cliente ao integrar a API.
-- `npm run start` aponta para `dist/server.js`, mas o `tsconfig.json` compila `src/` para `dist/` e não há `src/server.ts` no código atual. O entrypoint compilado de `src/app.ts` é `dist/app.js`; o comando de produção deve ser alinhado a um entrypoint existente.
-- O PRD cita categorias, pedidos, frete, newsletter, upload de imagens e rotas administrativas. Esses recursos não aparecem implementados nas rotas e modelos atuais.
+- Os hooks de autenticação de `products` e `categories` estão comentados no momento. Isso significa que, na prática, as rotas de catalogo e categorias ainda estão livres para uso público, a menos que o hook seja reativado manualmente.
+- A autenticação própria existe em `src/middlewares/auth.middleware.ts`, mas a proteção por rota não está aplicada por padrão. A validação do JWT é funcional, porém a autorização por nível de acesso (`ADMIN` vs `USER`) ainda não foi implementada.
+- A exclusão de produtos e categorias é lógica (`active: false`), não física. A listagem sem filtro pode continuar retornando registros inativos.
+- O service de autenticação retorna o objeto do usuário completo, incluindo `password` em hash. Esse dado deve ser removido da resposta antes de expor a API em produção.
+- O error handler trata erros de validação em `400`, mas erros de domínio ainda retornam mensagens técnicas e não um mapeamento formal de `404`/`409` para cenários como usuário inexistente, produto não encontrado ou email duplicado.
+- O campo `price` é persistido como `Decimal` do Prisma, enquanto os schemas de rota e os tipos TypeScript normalmente tratam o valor como `number`. O cliente e o backend devem convergir na serialização/normalização desse valor.
+- `npm run start` ainda deve ser alinhado com o entrypoint compilado correto (`dist/app.js`), porque o projeto atual não possui `src/server.ts` e o build gera saída sob `dist/`.
+- O PRD ainda prevê módulos como checkout, frete, pedido, perfil do usuário, upload de imagens e área administrativa. Esses recursos continuam como extensão do escopo atual, e não como partes já entregues.
 
 ## Escopo atual e extensões previstas
 
-Os arquivos de rota atuais cobrem produtos e autenticação. Não há implementação atual de categorias, checkout/pedidos, cálculo de frete, newsletter, upload de imagens ou endpoints de perfil do usuário. Consulte o [PRD-backend.md](./PRD-backend.md) para as ideias e requisitos planejados, sem assumir que seus endpoints já estão disponíveis.
+O backend implementado até agora cobre produtos, categorias e autenticação básica. O catálogo já está funcional como base da loja, com relacionamento entre produtos e categorias e filtros de listagem, enquanto a camada de autenticação fornece login e registro com JWT.
+
+Continuam fora do escopo entregue: checkout/pedidos, cálculo de frete, newsletter, upload de imagens, perfil do usuário, autorização por papel e rotas administrativas. Consulte o [PRD-backend.md](./PRD-backend.md) para os requisitos planejados e para a roadmap de evolução da API.

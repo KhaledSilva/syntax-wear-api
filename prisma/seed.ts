@@ -1,6 +1,6 @@
 import "dotenv/config";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient } from "@prisma/client";
+import { Prisma, PrismaClient } from "@prisma/client";
 
 const connectionString = process.env.DATABASE_URL;
 
@@ -241,6 +241,30 @@ const products = [
 	},
 ];
 
+const seedOrderMarker = "syntax-wear-orders-seed-v1";
+
+const seedOrderAddress = {
+	cep: "01001000",
+	street: "Praça da Sé",
+	number: "100",
+	complement: seedOrderMarker,
+	neighborhood: "Sé",
+	city: "São Paulo",
+	state: "SP",
+	country: "Brasil",
+};
+
+const seedOrderItems = [
+	{ productSlug: "camiseta-urban-code", quantity: 2 },
+	{ productSlug: "bone-classic", quantity: 1 },
+];
+
+const hasSeedOrderMarker = (address: Prisma.JsonValue) =>
+	typeof address === "object" &&
+	address !== null &&
+	!Array.isArray(address) &&
+	address.complement === seedOrderMarker;
+
 async function main() {
 	console.log("🌱 Iniciando seed...");
 
@@ -293,6 +317,95 @@ async function main() {
 	}
 
 	console.log(`✅ ${products.length} produtos criados/atualizados.`);
+
+	// 3. Criar ou atualizar um pedido de demonstração e seus itens
+	const user = await prisma.user.findFirst({
+		orderBy: { id: "asc" },
+		select: { id: true, email: true },
+	});
+
+	if (!user) {
+		console.warn(
+			"⚠️ Nenhum usuário encontrado; pedido de demonstração não foi criado. Cadastre um usuário e execute o seed novamente.",
+		);
+		return;
+	}
+
+	const seededProducts = await prisma.product.findMany({
+		where: {
+			slug: { in: seedOrderItems.map(({ productSlug }) => productSlug) },
+		},
+		select: { id: true, name: true, slug: true, price: true },
+	});
+	const productsBySlug = new Map(
+		seededProducts.map((product) => [product.slug, product]),
+	);
+
+	const orderItems = seedOrderItems.map(({ productSlug, quantity }) => {
+		const product = productsBySlug.get(productSlug);
+
+		if (!product) {
+			throw new Error(
+				`Produto "${productSlug}" não encontrado para criar o pedido de demonstração.`,
+			);
+		}
+
+		return {
+			productId: product.id,
+			productName: product.name,
+			unitPrice: product.price,
+			quantity,
+		};
+	});
+
+	const total = orderItems.reduce(
+		(sum, item) => sum.plus(item.unitPrice.mul(item.quantity)),
+		new Prisma.Decimal(0),
+	);
+
+	const seededOrder = await prisma.$transaction(async (transaction) => {
+		const userOrders = await transaction.order.findMany({
+			where: { userId: user.id },
+			select: { id: true, shippingAddress: true },
+		});
+		const existingSeedOrder = userOrders.find(({ shippingAddress }) =>
+			hasSeedOrderMarker(shippingAddress),
+		);
+
+		if (existingSeedOrder) {
+			await transaction.orderItem.deleteMany({
+				where: { orderId: existingSeedOrder.id },
+			});
+
+			return transaction.order.update({
+				where: { id: existingSeedOrder.id },
+				data: {
+					total,
+					status: "PENDING",
+					shippingAddress: seedOrderAddress,
+					paymentMethod: "PIX",
+					items: { create: orderItems },
+				},
+				include: { items: true },
+			});
+		}
+
+		return transaction.order.create({
+			data: {
+				userId: user.id,
+				total,
+				status: "PENDING",
+				shippingAddress: seedOrderAddress,
+				paymentMethod: "PIX",
+				items: { create: orderItems },
+			},
+			include: { items: true },
+		});
+	});
+
+	console.log(
+		`✅ Pedido de demonstração ${seededOrder.id} criado/atualizado para ${user.email} com ${seededOrder.items.length} itens.`,
+	);
 	console.log("🌱 Seed executado com sucesso!");
 }
 
