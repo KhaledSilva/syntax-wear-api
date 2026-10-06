@@ -1,12 +1,7 @@
 import { prisma } from "../utils/prisma";
+import { CreateCategory } from "../types";
 
-interface CreateCategoryData {
-    name: string;
-    slug: string;
-    description?: string | null;
-}
-
-type UpdateCategoryData = Partial<CreateCategoryData>;
+type UpdateCategoryData = Partial<CreateCategory>;
 
 export const getCategories = async () => {
     return prisma.category.findMany({
@@ -26,7 +21,7 @@ export const getCategoryById = async (id: number) => {
     return category;
 };
 
-export const createCategory = async (data: CreateCategoryData) => {
+export const createCategory = async (data: CreateCategory) => {
     const existingCategory = await prisma.category.findUnique({
         where: { slug: data.slug },
     });

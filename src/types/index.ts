@@ -39,6 +39,12 @@ export interface CreateProduct {
     images?: string[];
 }
 
+export interface CreateCategory {
+    name: string;
+    slug: string;
+    description?: string | null;
+}
+
 export interface UpdateProduct extends Partial<CreateProduct> {
     name?: string;
     description?: string;

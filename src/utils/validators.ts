@@ -72,6 +72,12 @@ export const createProductSchema = z
     images: z.array(z.string()).optional(),
   });
 
+export const createCategorySchema = z.object({
+  name: z.string().min(1, "Nome é obrigatório"),
+  slug: z.string().min(1, "Slug é obrigatório"),
+  description: z.string().nullable().optional(),
+});
+
   export const updateProductSchema = z
   .object({
     name: z.string().min(1, "Nome é obrigatório").optional(),

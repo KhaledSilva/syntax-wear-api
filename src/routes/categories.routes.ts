@@ -1,5 +1,6 @@
 import { FastifyInstance } from "fastify";
 import {
+  createNewCategory,
   getCategories,
   getCategoryById,
 } from "../controllers/categories.controller";
@@ -45,7 +46,6 @@ const errorResponses = {
     },
   },
 };
-
 
 export default async function categoriesRoutes(fastify: FastifyInstance) {
   // fastify.addHook("onRequest", authenticate);
@@ -97,5 +97,46 @@ export default async function categoriesRoutes(fastify: FastifyInstance) {
       },
     },
     getCategoryById,
+  );
+
+  fastify.post(
+    "/",
+    {
+      schema: {
+        tags: ["Categories"],
+        description: "Criar uma nova categoria",
+        security: [{ bearerAuth: [] }],
+        body: {
+          type: "object",
+          required: ["name"],
+          properties: {
+            name: {
+              type: "string",
+              description: "Nome da categoria"
+            },
+            description: {
+              type: "string",
+              description: "Descrição da categoria (opcional)",
+            },
+            active: {
+              type: "boolean",
+              description: "Categoria ativa",
+              default: true
+            },
+          },
+        },
+        response: {
+          201: {
+            description: "Categoria criada com sucesso",
+            type: "object",
+            properties: {
+              message: { type: "string" },
+            },
+          },
+          ...errorResponses,
+        },
+      },
+    },
+    createNewCategory,
   );
 }
