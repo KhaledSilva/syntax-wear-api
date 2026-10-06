@@ -1,8 +1,10 @@
 import { FastifyInstance } from "fastify";
 import {
   createNewCategory,
+  deleteExistingCategory,
   getCategories,
   getCategoryById,
+  updateExistingCategory,
 } from "../controllers/categories.controller";
 import { authenticate } from "../middlewares/auth.middleware";
 
@@ -138,5 +140,69 @@ export default async function categoriesRoutes(fastify: FastifyInstance) {
       },
     },
     createNewCategory,
+  );
+
+  fastify.put(
+    "/:id",
+    {
+      schema: {
+        tags: ["Categories"],
+        description: "Atualizar uma categoria existente",
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: "object",
+          properties: {
+            id: { type: "integer", minimum: 1, description: "ID da categoria" },
+          },
+          required: ["id"],
+        },
+        body: {
+          type: "object",
+          properties: {
+            name: { type: "string" },
+            description: { type: "string", nullable: true },
+            active: { type: "boolean" },
+          },
+        },
+        response: {
+          200: {
+            description: "Categoria atualizada com sucesso",
+            type: "object",
+            properties: categoryResponseProperties,
+          },
+          ...errorResponses,
+        },
+      },
+    },
+    updateExistingCategory,
+  );
+
+  fastify.delete(
+    "/:id",
+    {
+      schema: {
+        tags: ["Categories"],
+        description: "Desativar uma categoria pelo ID",
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: "object",
+          properties: {
+            id: { type: "integer", minimum: 1, description: "ID da categoria" },
+          },
+          required: ["id"],
+        },
+        response: {
+          200: {
+            description: "Categoria desativada com sucesso",
+            type: "object",
+            properties: {
+              message: { type: "string" },
+            },
+          },
+          ...errorResponses,
+        },
+      },
+    },
+    deleteExistingCategory,
   );
 }

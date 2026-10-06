@@ -45,6 +45,10 @@ export interface CreateCategory {
     description?: string | null;
 }
 
+export interface UpdateCategory extends Partial<CreateCategory> {
+    active?: boolean;
+}
+
 export interface UpdateProduct extends Partial<CreateProduct> {
     name?: string;
     description?: string;

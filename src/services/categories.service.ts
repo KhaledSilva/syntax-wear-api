@@ -1,7 +1,5 @@
 import { prisma } from "../utils/prisma";
-import { CreateCategory } from "../types";
-
-type UpdateCategoryData = Partial<CreateCategory>;
+import { CreateCategory, UpdateCategory } from "../types";
 
 export const getCategories = async () => {
     return prisma.category.findMany({
@@ -33,7 +31,7 @@ export const createCategory = async (data: CreateCategory) => {
     return prisma.category.create({ data });
 };
 
-export const updateCategory = async (id: number, data: UpdateCategoryData) => {
+export const updateCategory = async (id: number, data: UpdateCategory) => {
     const existingCategory = await prisma.category.findUnique({
         where: { id },
     });
@@ -61,30 +59,16 @@ export const updateCategory = async (id: number, data: UpdateCategoryData) => {
 export const deleteCategory = async (id: number) => {
     const existingCategory = await prisma.category.findUnique({
         where: { id },
-        select: { id: true },
     });
 
     if (!existingCategory) {
         throw new Error("Categoria não encontrada");
     }
 
-    const result = await prisma.category.deleteMany({
+    return prisma.category.update({
         where: {
             id,
-            products: { none: {} },
         },
+        data: { active: false },
     });
-
-    if (result.count === 0) {
-        const categoryStillExists = await prisma.category.findUnique({
-            where: { id },
-            select: { id: true },
-        });
-
-        if (!categoryStillExists) {
-            throw new Error("Categoria não encontrada");
-        }
-
-        throw new Error("Não é possível excluir uma categoria com produtos vinculados");
-    }
 };
