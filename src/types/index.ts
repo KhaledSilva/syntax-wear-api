@@ -68,3 +68,37 @@ export interface OrderFilters {
     sortBy?: "createdAt" | "totalPrice";
     sortOrder?: "asc" | "desc";
 }
+
+export interface CreateOrder {
+    items: Array<{
+        productId: number;
+        quantity: number;
+        size: string;
+    }>;
+    shippingAddress: {
+        cep: string;
+        street: string;
+        number: string;
+        complement?: string;
+        neighborhood: string;
+        city: string;
+        state: string;
+        country: string;
+    };
+    paymentMethod: string;
+}
+
+export type OrderStatus =
+    | "PENDING"
+    | "CONFIRMED"
+    | "PAID"
+    | "SHIPPED"
+    | "DELIVERED"
+    | "CANCELLED";
+
+export type UpdateOrder = {
+    items?: CreateOrder["items"];
+    shippingAddress?: Partial<CreateOrder["shippingAddress"]>;
+    paymentMethod?: string;
+    status?: OrderStatus;
+};

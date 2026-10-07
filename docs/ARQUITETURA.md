@@ -4,7 +4,7 @@ Este documento descreve a implementação atual do backend, organizado em Node.j
 
 ## Visão geral
 
-A API do e-commerce Syntax Wear implementa os módulos centrais de catálogo e autenticação, além de consulta autenticada de pedidos:
+A API do e-commerce Syntax Wear implementa os módulos centrais de catálogo e autenticação, além de criação e consulta autenticadas de pedidos:
 
 - consulta, criação, atualização e desativação lógica de produtos;
 - cadastro e autenticação de usuários com senha criptografada e JWT;
@@ -127,16 +127,22 @@ No cadastro, o service verifica se o email já existe, aplica `bcrypt.hash` com 
 
 O middleware `authenticate` chama `request.jwtVerify()`. Se a verificação falhar, responde `401`.
 
-## Pedidos: consulta autenticada
+## Pedidos: criação e consulta autenticadas
 
-As rotas de consulta de pedidos usam o prefixo `/orders` e exigem um JWT válido:
+As rotas de pedidos usam o prefixo `/orders` e exigem um JWT válido:
 
 | Método | Caminho | Finalidade | Comportamento |
 | --- | --- | --- | --- |
+| `POST` | `/orders` | Cria um pedido. | O pedido pertence ao usuário autenticado, inicia como `PENDING` e retorna `201`. |
 | `GET` | `/orders` | Lista pedidos. | Usuários recebem somente os próprios pedidos; `ADMIN` recebe todos. Os resultados vêm do mais recente para o mais antigo. |
 | `GET` | `/orders/:id` | Busca um pedido pelo ID. | O proprietário ou `ADMIN` recebe o pedido; pedido inexistente ou sem acesso retorna `404`. |
+| `PUT` | `/orders/:id` | Atualiza dados ou estado do pedido. | Aceita qualquer combinação de `status`, `items`, `shippingAddress` e `paymentMethod`; dados editáveis só mudam em `PENDING` e status segue as transições permitidas. |
 
-As respostas incluem os itens com snapshot de nome e preço unitário e dados públicos selecionados do produto (`id`, `name`, `slug` e `images`). O escopo atual cobre somente leitura; criação, edição e transições de status ainda não estão implementadas. Tokens emitidos no login e cadastro carregam o papel do usuário, e tokens anteriores sem essa informação continuam limitados ao acesso de usuário comum.
+O corpo de criação exige `items` (lista não vazia de `productId`, `quantity` e `size`), `shippingAddress` (CEP, rua, número, bairro, cidade, estado e país; complemento opcional) e `paymentMethod`. Campos extras, incluindo preços fornecidos pelo cliente, são rejeitados. Produtos inexistentes retornam `404`; produtos inativos, com tamanho indisponível ou com estoque menor que a quantidade solicitada retornam `409`.
+
+A criação e a atualização consultam os produtos no banco, verificam o tamanho selecionado, calculam o total usando os preços persistidos e guardam snapshots de nome e preço unitário, além do tamanho escolhido, nos itens. Cada operação grava o pedido e seus itens em uma transação. A criação inicia o pedido como `PENDING`. O `PUT` aceita qualquer combinação não vazia entre `status`, `items`, `shippingAddress` e `paymentMethod`; cada campo omitido permanece inalterado. O objeto `shippingAddress` também é parcial: por exemplo, pode-se enviar somente `number` ou `complement`, e os demais campos do endereço existente são preservados. Itens, endereço e pagamento só podem mudar enquanto o estado atual for `PENDING`; a lista de itens, quando enviada, substitui os itens e recalcula o total. As transições permitidas são `PENDING` → `CONFIRMED` ou `CANCELLED`, `CONFIRMED` → `PAID` ou `CANCELLED`, `PAID` → `SHIPPED` ou `CANCELLED` e `SHIPPED` → `DELIVERED`. Cancelar após pagamento só é permitido a `ADMIN`, e não há cancelamento após envio. O frete não está incluído e o estoque é validado, mas não é reservado nem reduzido. A coluna `OrderItem.size` é opcional para manter compatibilidade com itens antigos; pedidos novos e atualizados persistem o tamanho selecionado. As respostas incluem os itens e dados públicos selecionados do produto (`id`, `name`, `slug` e `images`). Tokens emitidos no login e cadastro carregam o papel do usuário, e tokens anteriores sem essa informação continuam limitados ao acesso de usuário comum.
+
+Exemplos de atualização: `PUT /orders/123` com `{ "status": "PAID" }` altera somente o status, e `{ "shippingAddress": { "number": "42" } }` altera somente o número. No `PUT`, todas as propriedades de `shippingAddress` são opcionais, inclusive é permitido enviar `{ "shippingAddress": {} }` sem modificar o endereço. O `id` precisa estar na URL como parte do caminho; não basta chamar `PUT /orders` sem o identificador. Toda requisição precisa incluir JWT válido.
 
 ## Modelo de dados Prisma
 
@@ -180,7 +186,7 @@ O datasource é PostgreSQL. Os modelos atuais são:
 ### `Order` e `OrderItem`
 
 - `Order` pertence a um usuário e contém total, status, endereço de entrega, método de pagamento e datas de criação/atualização.
-- `OrderItem` pertence a um pedido e a um produto, guardando quantidade e snapshot de nome e preço unitário.
+- `OrderItem` pertence a um pedido e a um produto, guardando quantidade, tamanho escolhido e snapshot de nome e preço unitário.
 - Os estados possíveis são `PENDING`, `CONFIRMED`, `PAID`, `SHIPPED`, `DELIVERED` e `CANCELLED`.
 - As rotas de consulta carregam os itens e uma seleção não sensível dos dados atuais do produto relacionado.
 
@@ -228,7 +234,7 @@ O endereço de documentação OpenAPI/Scalar é `/api-docs`. Também existem `GE
 
 - Os hooks de autenticação de `products` e `categories` estão comentados no momento. Isso significa que, na prática, as rotas de catalogo e categorias ainda estão livres para uso público, a menos que o hook seja reativado manualmente.
 - A autenticação própria existe em `src/middlewares/auth.middleware.ts`; a proteção é aplicada individualmente nas rotas que a exigem.
-- As rotas de pedidos são protegidas e aplicam autorização por proprietário ou `ADMIN`; essa autorização está limitada às operações de leitura atualmente disponíveis.
+- As rotas de pedidos são protegidas; leitura, edição e transições de status aplicam autorização por proprietário ou `ADMIN`, e a criação vincula o pedido ao usuário do token.
 - A exclusão de produtos e categorias é lógica (`active: false`), não física. A listagem sem filtro pode continuar retornando registros inativos.
 - O service de autenticação retorna o objeto do usuário completo, incluindo `password` em hash. Esse dado deve ser removido da resposta antes de expor a API em produção.
 - O error handler trata erros de validação em `400`, mas erros de domínio ainda retornam mensagens técnicas e não um mapeamento formal de `404`/`409` para cenários como usuário inexistente, produto não encontrado ou email duplicado.
@@ -240,4 +246,4 @@ O endereço de documentação OpenAPI/Scalar é `/api-docs`. Também existem `GE
 
 O backend implementado até agora cobre produtos, categorias e autenticação básica. O catálogo já está funcional como base da loja, com relacionamento entre produtos e categorias e filtros de listagem, enquanto a camada de autenticação fornece login e registro com JWT.
 
-Continuam fora do escopo entregue: criação e atualização de pedidos, transições de status, checkout, cálculo de frete, newsletter, upload de imagens, perfil do usuário e rotas administrativas. A autorização por papel está implementada somente nas consultas de pedidos. Consulte o [PRD-backend.md](./PRD-backend.md) para os requisitos planejados e para a roadmap de evolução da API.
+Continuam fora do escopo entregue: checkout, cálculo de frete, newsletter, upload de imagens, perfil do usuário e rotas administrativas. A autorização por papel está implementada nas consultas e operações de pedido disponíveis. Consulte o [PRD-backend.md](./PRD-backend.md) para os requisitos planejados e para a roadmap de evolução da API.

@@ -110,3 +110,80 @@ export const deleteCategorySchema = z.object({
   export const orderIdSchema = z.object({
     id: z.coerce.number().int().positive("ID do pedido inválido"),
   });
+
+  export const createOrderSchema = z
+    .object({
+      items: z
+        .array(
+          z
+            .object({
+              productId: z.number().int().positive("Produto inválido"),
+              quantity: z.number().int().positive("Quantidade deve ser um inteiro positivo"),
+              size: z.string().min(1, "Tamanho é obrigatório"),
+            })
+            .strict(),
+        )
+        .min(1, "O pedido deve conter ao menos um item"),
+      shippingAddress: z
+        .object({
+          cep: z.string().trim().min(1, "CEP é obrigatório").max(20),
+          street: z.string().trim().min(1, "Rua é obrigatória").max(200),
+          number: z.string().trim().min(1, "Número é obrigatório").max(30),
+          complement: z.string().trim().max(200).optional(),
+          neighborhood: z.string().trim().min(1, "Bairro é obrigatório").max(100),
+          city: z.string().trim().min(1, "Cidade é obrigatória").max(100),
+          state: z.string().trim().min(1, "Estado é obrigatório").max(100),
+          country: z.string().trim().min(1, "País é obrigatório").max(100),
+        })
+        .strict(),
+      paymentMethod: z.string().trim().min(1, "Método de pagamento é obrigatório").max(100),
+    })
+    .strict()
+    .superRefine(({ items }, context) => {
+      const productIds = new Set<number>();
+      items.forEach(({ productId }, index) => {
+        if (productIds.has(productId)) {
+          context.addIssue({
+            code: "custom",
+            message: "Cada produto deve aparecer uma única vez no pedido",
+            path: ["items", index, "productId"],
+          });
+        }
+        productIds.add(productId);
+      });
+    });
+
+  export const updateOrderSchema = z
+    .object({
+      status: z.enum(["PENDING", "CONFIRMED", "PAID", "SHIPPED", "DELIVERED", "CANCELLED"]).optional(),
+      items: createOrderSchema.shape.items.optional(),
+      shippingAddress: createOrderSchema.shape.shippingAddress
+        .partial()
+        .strict()
+        .optional(),
+      paymentMethod: createOrderSchema.shape.paymentMethod.optional(),
+    })
+    .strict()
+    .refine(
+      ({ status, items, shippingAddress, paymentMethod }) =>
+        status !== undefined ||
+        items !== undefined ||
+        shippingAddress !== undefined ||
+        paymentMethod !== undefined,
+      { message: "Informe ao menos um campo para atualizar o pedido" },
+    )
+    .superRefine(({ items }, context) => {
+      if (!items) return;
+
+      const productIds = new Set<number>();
+      items.forEach(({ productId }, index) => {
+        if (productIds.has(productId)) {
+          context.addIssue({
+            code: "custom",
+            message: "Cada produto deve aparecer uma única vez no pedido",
+            path: ["items", index, "productId"],
+          });
+        }
+        productIds.add(productId);
+      });
+    });
