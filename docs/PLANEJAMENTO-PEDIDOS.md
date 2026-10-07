@@ -1,6 +1,6 @@
 # Planejamento: CRUD de pedidos
 
-Este documento registra o escopo e as decisões para implementar pedidos na API Syntax Wear. É um planejamento: não representa funcionalidades já implementadas.
+Este documento registra o escopo, as decisões e o andamento da implementação de pedidos na API Syntax Wear.
 
 ## Escopo e decisões
 
@@ -29,7 +29,8 @@ As relações devem permitir consultar os pedidos de um usuário, os itens de ca
 ### Andamento
 
 - Etapa 1 — schema e migration: schema Prisma e arquivo de migration criados e migration aplicada ao banco.
-- Etapas 2 a 6: não iniciadas.
+- Consulta de pedidos: implementadas as rotas `GET /orders` e `GET /orders/:id`, com autenticação JWT, isolamento por proprietário e acesso global para `ADMIN`.
+- As demais operações de criação, edição e transição de status, assim como validações correspondentes e seus testes, continuam pendentes.
 
 ## API proposta
 
@@ -38,8 +39,8 @@ Prefixo: `/orders`.
 | Método | Rota | Finalidade |
 | --- | --- | --- |
 | `POST` | `/orders` | Criar um pedido para o usuário autenticado. |
-| `GET` | `/orders` | Listar os pedidos do usuário autenticado; `ADMIN` pode listar todos. |
-| `GET` | `/orders/:id` | Consultar um pedido, respeitando propriedade ou papel `ADMIN`. |
+| `GET` | `/orders` | Implementado: listar os pedidos do usuário autenticado; `ADMIN` pode listar todos. |
+| `GET` | `/orders/:id` | Implementado: consultar um pedido, respeitando propriedade ou papel `ADMIN`; pedidos sem acesso retornam `404`. |
 | `PATCH` | `/orders/:id` | Atualizar itens, endereço ou método de pagamento enquanto o pedido estiver `PENDING`. |
 | `PATCH` | `/orders/:id/status` | Avançar ou cancelar o pedido conforme as transições e permissões permitidas. |
 
@@ -69,18 +70,18 @@ Não haverá `DELETE /orders/:id`: o pedido será cancelado em vez de removido.
    - Proteger as rotas de pedidos com JWT.
    - Aplicar autorização por propriedade: o usuário acessa apenas os próprios pedidos.
    - Permitir acesso administrativo a todos os pedidos para usuários `ADMIN`.
-   - O middleware existente verifica o JWT; a autorização por papel e propriedade precisará ser implementada como regra adicional.
+   - O middleware existente verifica o JWT; proteção e autorização por propriedade/papel estão implementadas nas rotas de leitura. Novas rotas devem aplicar as mesmas regras.
 
 5. **Controller e rotas**
    - Criar `orders.service.ts`, `orders.controller.ts` e `orders.routes.ts`, seguindo a organização existente.
    - Registrar as rotas no Fastify sob o prefixo `/orders`.
-   - Definir respostas HTTP e documentação OpenAPI coerentes com os schemas e as permissões.
+   - Definir respostas HTTP e documentação OpenAPI coerentes com os schemas e as permissões. (As rotas de consulta estão implementadas; as operações de escrita estão pendentes.)
 
 6. **Testes e documentação**
    - Testar validação de payloads, cálculo do total e edição apenas em pedidos pendentes.
    - Testar isolamento entre usuários e acesso administrativo.
    - Testar transições válidas e inválidas de status, incluindo cancelamento após pagamento.
-   - Atualizar `ARQUITETURA.md` quando o recurso for implementado, documentando comportamento e limitações reais.
+   - Atualizar `ARQUITETURA.md` quando o recurso for implementado, documentando comportamento e limitações reais. (Atualizada para as consultas implementadas; testes das regras ainda pendentes.)
 
 ## Fora do escopo desta versão
 

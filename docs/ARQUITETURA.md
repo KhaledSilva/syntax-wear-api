@@ -4,11 +4,12 @@ Este documento descreve a implementação atual do backend, organizado em Node.j
 
 ## Visão geral
 
-A API do e-commerce Syntax Wear implementa, até o momento, os módulos centrais de catálogo e autenticação:
+A API do e-commerce Syntax Wear implementa os módulos centrais de catálogo e autenticação, além de consulta autenticada de pedidos:
 
 - consulta, criação, atualização e desativação lógica de produtos;
 - cadastro e autenticação de usuários com senha criptografada e JWT;
 - gestão de categorias com slug e ativação lógica;
+- listagem e consulta de pedidos com autorização por proprietário ou papel `ADMIN`;
 - persistência em PostgreSQL por meio do Prisma;
 - documentação OpenAPI servida pelo Scalar.
 
@@ -29,12 +30,15 @@ O fluxo de uma requisição segue a convenção do Fastify:
 | `src/routes/products.routes.ts` | Declara os endpoints de produtos, documentação OpenAPI e parâmetros de filtro. |
 | `src/routes/categories.routes.ts` | Declara os endpoints de categorias com CRUD e documentação de respostas. |
 | `src/routes/auth.routes.ts` | Declara `register` e `login` da API. |
+| `src/routes/orders.routes.ts` | Declara listagem e busca autenticadas de pedidos. |
 | `src/controllers/products.controller.ts` | Valida dados de entrada dos produtos, prepara slug, chama services e define respostas HTTP. |
 | `src/controllers/categories.controller.ts` | Encapsula validação e execução do CRUD de categoria. |
 | `src/controllers/auth.controller.ts` | Valida cadastro e login, gera token JWT e formata resposta. |
+| `src/controllers/orders.controller.ts` | Obtém a identidade do token, valida o ID e prepara respostas de pedidos. |
 | `src/services/products.service.ts` | Implementa listagem, filtros, paginação, criação, atualização e desativação lógica de produtos. |
 | `src/services/categories.service.ts` | Implementa consulta, criação, atualização e desativação lógica de categorias. |
 | `src/services/auth.service.ts` | Cria usuários, verifica email e senha e usa `bcrypt` para hash/verificação. |
+| `src/services/orders.service.ts` | Lista e consulta pedidos com escopo por usuário e dados dos itens/produtos. |
 | `src/utils/validators.ts` | Define schemas Zod para autenticação, categorias, produtos e filtros. |
 | `src/types/index.ts` | Define tipos TypeScript compartilhados para produtos, categorias, filtros e autenticação. |
 | `src/utils/prisma.ts` | Cria e exporta o cliente Prisma com o datasource do PostgreSQL. |
@@ -123,6 +127,17 @@ No cadastro, o service verifica se o email já existe, aplica `bcrypt.hash` com 
 
 O middleware `authenticate` chama `request.jwtVerify()`. Se a verificação falhar, responde `401`.
 
+## Pedidos: consulta autenticada
+
+As rotas de consulta de pedidos usam o prefixo `/orders` e exigem um JWT válido:
+
+| Método | Caminho | Finalidade | Comportamento |
+| --- | --- | --- | --- |
+| `GET` | `/orders` | Lista pedidos. | Usuários recebem somente os próprios pedidos; `ADMIN` recebe todos. Os resultados vêm do mais recente para o mais antigo. |
+| `GET` | `/orders/:id` | Busca um pedido pelo ID. | O proprietário ou `ADMIN` recebe o pedido; pedido inexistente ou sem acesso retorna `404`. |
+
+As respostas incluem os itens com snapshot de nome e preço unitário e dados públicos selecionados do produto (`id`, `name`, `slug` e `images`). O escopo atual cobre somente leitura; criação, edição e transições de status ainda não estão implementadas. Tokens emitidos no login e cadastro carregam o papel do usuário, e tokens anteriores sem essa informação continuam limitados ao acesso de usuário comum.
+
 ## Modelo de dados Prisma
 
 O datasource é PostgreSQL. Os modelos atuais são:
@@ -161,6 +176,13 @@ O datasource é PostgreSQL. Os modelos atuais são:
 - `updatedAt`: data de atualização automática pelo Prisma.
 - `category`: relacionamento obrigatório com `Category`.
 - `categoryId`: chave estrangeira da categoria do produto.
+
+### `Order` e `OrderItem`
+
+- `Order` pertence a um usuário e contém total, status, endereço de entrega, método de pagamento e datas de criação/atualização.
+- `OrderItem` pertence a um pedido e a um produto, guardando quantidade e snapshot de nome e preço unitário.
+- Os estados possíveis são `PENDING`, `CONFIRMED`, `PAID`, `SHIPPED`, `DELIVERED` e `CANCELLED`.
+- As rotas de consulta carregam os itens e uma seleção não sensível dos dados atuais do produto relacionado.
 
 As migrations registram a criação das tabelas, a inclusão de `colors` em produtos, a criação de `Category` e o vínculo entre `Product` e `Category`. O schema é a referência declarativa atual; as migrations continuam registrando a evolução do banco.
 
@@ -205,16 +227,17 @@ O endereço de documentação OpenAPI/Scalar é `/api-docs`. Também existem `GE
 ## Comportamentos e pontos de atenção observados
 
 - Os hooks de autenticação de `products` e `categories` estão comentados no momento. Isso significa que, na prática, as rotas de catalogo e categorias ainda estão livres para uso público, a menos que o hook seja reativado manualmente.
-- A autenticação própria existe em `src/middlewares/auth.middleware.ts`, mas a proteção por rota não está aplicada por padrão. A validação do JWT é funcional, porém a autorização por nível de acesso (`ADMIN` vs `USER`) ainda não foi implementada.
+- A autenticação própria existe em `src/middlewares/auth.middleware.ts`; a proteção é aplicada individualmente nas rotas que a exigem.
+- As rotas de pedidos são protegidas e aplicam autorização por proprietário ou `ADMIN`; essa autorização está limitada às operações de leitura atualmente disponíveis.
 - A exclusão de produtos e categorias é lógica (`active: false`), não física. A listagem sem filtro pode continuar retornando registros inativos.
 - O service de autenticação retorna o objeto do usuário completo, incluindo `password` em hash. Esse dado deve ser removido da resposta antes de expor a API em produção.
 - O error handler trata erros de validação em `400`, mas erros de domínio ainda retornam mensagens técnicas e não um mapeamento formal de `404`/`409` para cenários como usuário inexistente, produto não encontrado ou email duplicado.
 - O campo `price` é persistido como `Decimal` do Prisma, enquanto os schemas de rota e os tipos TypeScript normalmente tratam o valor como `number`. O cliente e o backend devem convergir na serialização/normalização desse valor.
 - `npm run start` ainda deve ser alinhado com o entrypoint compilado correto (`dist/app.js`), porque o projeto atual não possui `src/server.ts` e o build gera saída sob `dist/`.
-- O PRD ainda prevê módulos como checkout, frete, pedido, perfil do usuário, upload de imagens e área administrativa. Esses recursos continuam como extensão do escopo atual, e não como partes já entregues.
+- O PRD ainda prevê módulos como criação e gestão completa de pedidos, checkout, frete, perfil do usuário, upload de imagens e área administrativa. Esses recursos continuam como extensão do escopo atual, e não como partes já entregues.
 
 ## Escopo atual e extensões previstas
 
 O backend implementado até agora cobre produtos, categorias e autenticação básica. O catálogo já está funcional como base da loja, com relacionamento entre produtos e categorias e filtros de listagem, enquanto a camada de autenticação fornece login e registro com JWT.
 
-Continuam fora do escopo entregue: checkout/pedidos, cálculo de frete, newsletter, upload de imagens, perfil do usuário, autorização por papel e rotas administrativas. Consulte o [PRD-backend.md](./PRD-backend.md) para os requisitos planejados e para a roadmap de evolução da API.
+Continuam fora do escopo entregue: criação e atualização de pedidos, transições de status, checkout, cálculo de frete, newsletter, upload de imagens, perfil do usuário e rotas administrativas. A autorização por papel está implementada somente nas consultas de pedidos. Consulte o [PRD-backend.md](./PRD-backend.md) para os requisitos planejados e para a roadmap de evolução da API.

@@ -11,6 +11,7 @@ import swagger from "@fastify/swagger";
 import scalar from "@scalar/fastify-api-reference";
 import jwt from "@fastify/jwt";
 import authRoutes from "./routes/auth.routes";
+import ordersRoutes from "./routes/orders.routes";
 import z, { ZodError } from "zod";
 import { errorHandler } from "./middlewares/error.middleware";
 
@@ -70,6 +71,7 @@ fastify.register(scalar, {
 fastify.register(productRoutes, { prefix: "/products" });
 fastify.register(categoriesRoutes, { prefix: "/categories" });
 fastify.register(authRoutes, { prefix: "/auth" });
+fastify.register(ordersRoutes, { prefix: "/orders" });
 
 // Declare a route
 fastify.get("/", async (request, reply) => {

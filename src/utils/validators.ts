@@ -106,3 +106,7 @@ export const deleteCategorySchema = z.object({
   export const deleteProductSchema = z.object({
     id: z.number().int().min(1, "ID inválido"),
   });
+
+  export const orderIdSchema = z.object({
+    id: z.coerce.number().int().positive("ID do pedido inválido"),
+  });
