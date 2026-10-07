@@ -52,6 +52,23 @@ export const updateExistingOrder = async (
   }
 };
 
+export const cancelOrder = async (
+  request: FastifyRequest<{ Params: { id: string } }>,
+  reply: FastifyReply,
+) => {
+  const { id } = orderIdSchema.parse(request.params);
+
+  try {
+    const order = await updateOrder(id, orderAccess(request), { status: "CANCELLED" });
+    return reply.status(200).send(order);
+  } catch (error) {
+    if (error instanceof OrderServiceError) {
+      return reply.status(error.statusCode).send({ message: error.message });
+    }
+    throw error;
+  }
+};
+
 export const listOrders = async (request: FastifyRequest, reply: FastifyReply) => {
   const orders = await getOrders(orderAccess(request));
 

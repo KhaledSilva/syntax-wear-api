@@ -1,5 +1,6 @@
 import { FastifyInstance } from "fastify";
 import {
+  cancelOrder,
   createNewOrder,
   getOrder,
   listOrders,
@@ -172,6 +173,30 @@ export default async function ordersRoutes(fastify: FastifyInstance) {
       },
     },
     updateExistingOrder,
+  );
+
+  fastify.delete<{ Params: { id: string } }>(
+    "/:id",
+    {
+      preHandler: authenticate,
+      schema: {
+        tags: ["Orders"],
+        description: "Pedido cancelado com sucessso",
+        security: [{ bearerAuth: [] }],
+        params: {
+          type: "object",
+          properties: {
+            id: { type: "string", pattern: "^[1-9]\\d*$", description: "ID do pedido" },
+          },
+          required: ["id"],
+        },
+        response: {
+          200: orderResponse,
+          ...errorResponses,
+        },
+      },
+    },
+    cancelOrder,
   );
 
   fastify.get(

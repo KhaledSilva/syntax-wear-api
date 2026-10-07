@@ -33,6 +33,7 @@ As relações devem permitir consultar os pedidos de um usuário, os itens de ca
 - Criação de pedidos: implementada a rota `POST /orders`, com validação do payload, cálculo de total pelo preço atual no banco, snapshots dos itens e gravação transacional. Produtos inativos ou sem estoque suficiente não são aceitos; o estoque não é alterado.
 - Atualização de pedidos: implementada `PUT /orders/:id`, que aceita qualquer combinação não vazia de status, itens, endereço (inclusive campos parciais) e método de pagamento; campos omitidos permanecem inalterados. Itens, endereço e pagamento só mudam enquanto o pedido está `PENDING`.
 - Transições de status também são aceitas pelo `PUT`, somente conforme o fluxo definido e com a regra de cancelamento após pagamento restrita a `ADMIN`.
+- `DELETE /orders/:id` implementado como cancelamento lógico; o registro não é removido e as permissões/transições de cancelamento são reutilizadas.
 - Testes automatizados das regras ainda estão pendentes.
 
 ## API proposta
@@ -45,8 +46,9 @@ Prefixo: `/orders`.
 | `GET` | `/orders` | Implementado: listar os pedidos do usuário autenticado; `ADMIN` pode listar todos. |
 | `GET` | `/orders/:id` | Implementado: consultar um pedido, respeitando propriedade ou papel `ADMIN`; pedidos sem acesso retornam `404`. |
 | `PUT` | `/orders/:id` | Implementado: atualizar qualquer combinação de status, itens, endereço e método de pagamento respeitando as regras de transição e edição pendente. |
+| `DELETE` | `/orders/:id` | Implementado: cancelar o pedido sem removê-lo fisicamente, respeitando as regras de transição e permissões. |
 
-Não haverá `DELETE /orders/:id`: o pedido será cancelado em vez de removido.
+O `DELETE` cancela o pedido em vez de removê-lo fisicamente.
 
 ## Etapas de implementação
 
