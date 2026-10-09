@@ -6,17 +6,22 @@ import {
   listProducts,
   updateExistingProduct,
 } from "../controllers/products.controller";
-import { authenticate } from "../middlewares/auth.middleware";
+import {
+  authenticate,
+  authorizeAdminForMutations,
+} from "../middlewares/auth.middleware";
 import { number } from "zod";
 
 export default async function productsRoutes(fastify: FastifyInstance) {
-  // fastify.addHook("onRequest", authenticate);
+  fastify.addHook("onRequest", authenticate);
+  fastify.addHook("preHandler", authorizeAdminForMutations);
   fastify.get(
     "/",
     {
       schema: {
         tags: ["Products"],
         description: "Lista os produtos disponíveis",
+        security: [{ bearerAuth: [] }],
         response: {
           200: {
             description: "Lista de produtos",
@@ -84,6 +89,7 @@ export default async function productsRoutes(fastify: FastifyInstance) {
       schema: {
         tags: ["Products"],
         description: "Obter um produto pelo ID",
+        security: [{ bearerAuth: [] }],
         params: {
           type: "object",
           properties: {
@@ -157,7 +163,8 @@ export default async function productsRoutes(fastify: FastifyInstance) {
     {
       schema: {
         tags: ["Products"],
-        description: "Criar um novo produto",
+        description: "Criar um novo produto (requer papel ADMIN)",
+        security: [{ bearerAuth: [] }],
         required: ["name", "description", "price", "categoryId", "active", "stock"],
         body: {
           type: "object",
@@ -193,7 +200,7 @@ export default async function productsRoutes(fastify: FastifyInstance) {
     {
       schema: {
         tags: ["Products"],
-        description: "Atualizar um produto existente",
+        description: "Atualizar um produto existente (requer papel ADMIN)",
         security: [{ bearerAuth: [] }],
         params: {
           type: "object",
@@ -275,7 +282,8 @@ export default async function productsRoutes(fastify: FastifyInstance) {
     {
       schema: {
         tags: ["Products"],
-        description: "Excluir um produto pelo ID",
+        description: "Excluir um produto pelo ID (requer papel ADMIN)",
+        security: [{ bearerAuth: [] }],
         params: {
           type: "object",
           properties: {

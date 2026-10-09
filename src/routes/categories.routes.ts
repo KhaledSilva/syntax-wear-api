@@ -6,7 +6,10 @@ import {
   getCategoryById,
   updateExistingCategory,
 } from "../controllers/categories.controller";
-import { authenticate } from "../middlewares/auth.middleware";
+import {
+  authenticate,
+  authorizeAdminForMutations,
+} from "../middlewares/auth.middleware";
 
 const categoryResponseProperties = {
   id: { type: "integer" },
@@ -50,7 +53,8 @@ const errorResponses = {
 };
 
 export default async function categoriesRoutes(fastify: FastifyInstance) {
-  // fastify.addHook("onRequest", authenticate);
+  fastify.addHook("onRequest", authenticate);
+  fastify.addHook("preHandler", authorizeAdminForMutations);
 
   fastify.get(
     "/",
@@ -58,6 +62,7 @@ export default async function categoriesRoutes(fastify: FastifyInstance) {
       schema: {
         tags: ["Categories"],
         description: "Lista as categorias disponíveis",
+        security: [{ bearerAuth: [] }],
         response: {
           200: {
             description: "Lista de categorias",
@@ -106,7 +111,7 @@ export default async function categoriesRoutes(fastify: FastifyInstance) {
     {
       schema: {
         tags: ["Categories"],
-        description: "Criar uma nova categoria",
+        description: "Criar uma nova categoria (requer papel ADMIN)",
         security: [{ bearerAuth: [] }],
         body: {
           type: "object",
@@ -147,7 +152,7 @@ export default async function categoriesRoutes(fastify: FastifyInstance) {
     {
       schema: {
         tags: ["Categories"],
-        description: "Atualizar uma categoria existente",
+        description: "Atualizar uma categoria existente (requer papel ADMIN)",
         security: [{ bearerAuth: [] }],
         params: {
           type: "object",
@@ -182,7 +187,7 @@ export default async function categoriesRoutes(fastify: FastifyInstance) {
     {
       schema: {
         tags: ["Categories"],
-        description: "Desativar uma categoria pelo ID",
+        description: "Desativar uma categoria pelo ID (requer papel ADMIN)",
         security: [{ bearerAuth: [] }],
         params: {
           type: "object",
