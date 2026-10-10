@@ -117,7 +117,7 @@ export default async function ordersRoutes(fastify: FastifyInstance) {
       preHandler: authenticate,
       schema: {
         tags: ["Orders"],
-        description: "Informe o ID na URL (ex.: /orders/123) e ao menos um campo no JSON; shippingAddress aceita somente campos parciais.",
+        description: "Informe o ID na URL (ex.: /orders/123) e ao menos um campo no JSON; shippingAddress aceita somente campos parciais. Compradores podem cancelar pedidos não pagos; transições operacionais, inclusive CONFIRMED e PAID, exigem ADMIN. A definição manual de PAID é reservada ao fluxo administrativo autorizado.",
         security: [{ bearerAuth: [] }],
         params: {
           type: "object",
@@ -134,6 +134,7 @@ export default async function ordersRoutes(fastify: FastifyInstance) {
             status: {
               type: "string",
               enum: ["PENDING", "CONFIRMED", "PAID", "SHIPPED", "DELIVERED", "CANCELLED"],
+              description: "Somente ADMIN pode confirmar, marcar como pago, enviar ou marcar como entregue; não há integração confiável de pagamento/envio configurada. Compradores podem solicitar somente CANCELLED, sujeito às regras do pedido.",
             },
             items: {
               type: "array",

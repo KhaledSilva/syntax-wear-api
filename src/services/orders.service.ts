@@ -169,6 +169,17 @@ export const updateOrder = async (
       input.paymentMethod !== undefined;
     const requestedStatus = input.status;
 
+    if (
+      requestedStatus !== undefined &&
+      requestedStatus !== "CANCELLED" &&
+      !access.isAdmin
+    ) {
+      throw new OrderServiceError(
+        "Somente ADMIN pode realizar transições operacionais do pedido",
+        403,
+      );
+    }
+
     if (hasOrderData && existingOrder.status !== "PENDING") {
       throw new OrderServiceError("Somente pedidos pendentes podem ser atualizados", 409);
     }
