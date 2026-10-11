@@ -1,8 +1,7 @@
-import assert from "node:assert/strict";
-import { afterEach, beforeEach, describe, it } from "node:test";
 import Fastify from "fastify";
 import jwt from "@fastify/jwt";
 import { OrderStatus, Prisma } from "@prisma/client";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import ordersRoutes from "../src/routes/orders.routes";
 import { OrderServiceError, updateOrder } from "../src/services/orders.service";
 import { prisma } from "../src/utils/prisma";
@@ -66,7 +65,16 @@ const buyer = { userId: order.userId, isAdmin: false };
 const otherBuyer = { userId: order.userId + 1, isAdmin: false };
 const admin = { userId: 99, isAdmin: true };
 
-describe("order status transitions", () => {
+const expectOrderServiceError = async (
+  operation: Promise<unknown>,
+  statusCode: number,
+) => {
+  const error = await operation.catch((caught: unknown) => caught);
+  expect(error).toBeInstanceOf(OrderServiceError);
+  expect(error).toMatchObject({ statusCode });
+};
+
+describe("transições de status dos pedidos", () => {
   beforeEach(() => {
     order.status = "PENDING";
     setupMockTransaction();
@@ -80,90 +88,88 @@ describe("order status transitions", () => {
     }
   });
 
-  it("allows only ADMIN to ship paid orders and mark shipped orders delivered", async () => {
+  it("permite somente ao ADMIN enviar pedidos pagos e marcar pedidos enviados como entregues", async () => {
     order.status = "PAID";
     const shipped = await updateOrder(order.id, admin, { status: "SHIPPED" });
-    assert.equal(shipped.status, "SHIPPED");
+    expect(shipped.status).toBe("SHIPPED");
 
     const delivered = await updateOrder(order.id, admin, { status: "DELIVERED" });
-    assert.equal(delivered.status, "DELIVERED");
+    expect(delivered.status).toBe("DELIVERED");
   });
 
-  it("rejects operational shipping and delivery transitions from buyers", async () => {
+  it("rejeita transições operacionais de envio e entrega solicitadas por compradores", async () => {
     order.status = "PAID";
-    await assert.rejects(
+    await expectOrderServiceError(
       updateOrder(order.id, buyer, { status: "SHIPPED" }),
-      (error: unknown) =>
-        error instanceof OrderServiceError && error.statusCode === 403,
+      403,
     );
 
     order.status = "SHIPPED";
-    await assert.rejects(
+    await expectOrderServiceError(
       updateOrder(order.id, buyer, { status: "DELIVERED" }),
-      (error: unknown) =>
-        error instanceof OrderServiceError && error.statusCode === 403,
+      403,
     );
   });
 
-  it("rejects invalid transitions even for ADMIN", async () => {
-    await assert.rejects(
+  it("rejeita transições inválidas mesmo para ADMIN", async () => {
+    await expectOrderServiceError(
       updateOrder(order.id, admin, { status: "DELIVERED" }),
-      (error: unknown) =>
-        error instanceof OrderServiceError && error.statusCode === 409,
+      409,
     );
   });
 
-  it("keeps order ownership checks when updating", async () => {
-    await assert.rejects(
+  it("mantém a verificação de propriedade do pedido durante a atualização", async () => {
+    await expectOrderServiceError(
       updateOrder(order.id, otherBuyer, { status: "CANCELLED" }),
-      (error: unknown) =>
-        error instanceof OrderServiceError && error.statusCode === 404,
+      404,
     );
   });
 
-  it("keeps buyer cancellation for pending orders and blocks cancellation after payment", async () => {
+  it("permite ao comprador cancelar pedidos pendentes e bloqueia o cancelamento após o pagamento", async () => {
     const cancelled = await updateOrder(order.id, buyer, { status: "CANCELLED" });
-    assert.equal(cancelled.status, "CANCELLED");
+    expect(cancelled.status).toBe("CANCELLED");
 
     order.status = "PAID";
-    await assert.rejects(
+    await expectOrderServiceError(
       updateOrder(order.id, buyer, { status: "CANCELLED" }),
-      (error: unknown) =>
-        error instanceof OrderServiceError && error.statusCode === 403,
+      403,
     );
   });
 
-  it("enforces the same role, ownership, and transition rules through HTTP", async (context) => {
+  it("aplica por HTTP as mesmas regras de papel, propriedade e transição", async () => {
     const app = Fastify();
     await app.register(jwt, { secret: "test-secret-for-order-route-tests" });
     await app.register(ordersRoutes, { prefix: "/orders" });
     await app.ready();
-    context.after(() => app.close());
 
-    const buyerToken = app.jwt.sign({ userId: buyer.userId, role: "USER" });
-    const otherBuyerToken = app.jwt.sign({ userId: otherBuyer.userId, role: "USER" });
-    const adminToken = app.jwt.sign({ userId: admin.userId, role: "ADMIN" });
-    const request = (token: string, status: OrderStatus) =>
-      app.inject({
-        method: "PUT",
-        url: `/orders/${order.id}`,
-        headers: { authorization: `Bearer ${token}` },
-        payload: { status },
-      });
+    try {
+      const buyerToken = app.jwt.sign({ userId: buyer.userId, role: "USER" });
+      const otherBuyerToken = app.jwt.sign({ userId: otherBuyer.userId, role: "USER" });
+      const adminToken = app.jwt.sign({ userId: admin.userId, role: "ADMIN" });
+      const request = (token: string, status: OrderStatus) =>
+        app.inject({
+          method: "PUT",
+          url: `/orders/${order.id}`,
+          headers: { authorization: `Bearer ${token}` },
+          payload: { status },
+        });
 
-    order.status = "PAID";
-    const buyerShip = await request(buyerToken, "SHIPPED");
-    assert.equal(buyerShip.statusCode, 403);
+      order.status = "PAID";
+      const buyerShip = await request(buyerToken, "SHIPPED");
+      expect(buyerShip.statusCode).toBe(403);
 
-    const adminShip = await request(adminToken, "SHIPPED");
-    assert.equal(adminShip.statusCode, 200);
-    assert.equal(order.status, "SHIPPED");
+      const adminShip = await request(adminToken, "SHIPPED");
+      expect(adminShip.statusCode).toBe(200);
+      expect(order.status).toBe("SHIPPED");
 
-    const adminDeliver = await request(adminToken, "DELIVERED");
-    assert.equal(adminDeliver.statusCode, 200);
-    assert.equal(order.status, "DELIVERED");
+      const adminDeliver = await request(adminToken, "DELIVERED");
+      expect(adminDeliver.statusCode).toBe(200);
+      expect(order.status).toBe("DELIVERED");
 
-    const nonOwnerCancel = await request(otherBuyerToken, "CANCELLED");
-    assert.equal(nonOwnerCancel.statusCode, 404);
+      const nonOwnerCancel = await request(otherBuyerToken, "CANCELLED");
+      expect(nonOwnerCancel.statusCode).toBe(404);
+    } finally {
+      await app.close();
+    }
   });
 });

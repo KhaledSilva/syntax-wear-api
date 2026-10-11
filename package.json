@@ -6,9 +6,10 @@
   "scripts": {
     "dev": "tsx watch src/app.ts",
     "build": "tsc",
-    "test": "tsx --test tests/orders-transitions.test.ts",
+    "test": "vitest run tests/orders-transitions.test.ts",
     "test:auth": "vitest run tests/auth.routes.test.ts",
     "test:categories": "vitest run tests/categories.routes.test.ts",
+    "test:orders": "vitest run tests/orders.routes.test.ts",
     "test:products": "vitest run tests/products.routes.test.ts",
     "start": "node dist/server.js",
     "test:ui": "vitest --ui",
