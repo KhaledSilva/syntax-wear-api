@@ -7,7 +7,11 @@
     "dev": "tsx watch src/app.ts",
     "build": "tsc",
     "test": "tsx --test tests/orders-transitions.test.ts",
+    "test:auth": "vitest run tests/auth.routes.test.ts",
+    "test:categories": "vitest run tests/categories.routes.test.ts",
+    "test:products": "vitest run tests/products.routes.test.ts",
     "start": "node dist/server.js",
+    "test:ui": "vitest --ui",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
@@ -43,8 +47,10 @@
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
     "@types/node": "^24.10.1",
+    "@vitest/ui": "^5.0.3",
     "prisma": "^7.10.0",
     "tsx": "^4.20.6",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^5.0.3"
   }
 }
