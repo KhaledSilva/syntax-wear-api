@@ -12,7 +12,6 @@ import scalar from "@scalar/fastify-api-reference";
 import jwt from "@fastify/jwt";
 import authRoutes from "./routes/auth.routes";
 import ordersRoutes from "./routes/orders.routes";
-import z, { ZodError } from "zod";
 import { errorHandler } from "./middlewares/error.middleware";
 
 const PORT = parseInt(process.env.PORT ?? "3000");
@@ -42,12 +41,7 @@ fastify.register(swagger, {
       description: "API para o e-commerce Syntax Wear",
       version: "1.0.0",
     },
-    servers: [
-      {
-        url: `http://localhost:${PORT}`,
-        description: "Servidor de desenvolvimento",
-      },
-    ],
+    servers: [],
     components: {
       securitySchemes: {
         bearerAuth: {
@@ -90,14 +84,5 @@ fastify.get("/health", async (request, reply) => {
 });
 
 fastify.setErrorHandler(errorHandler);
-
-// Run the server!
-fastify.listen({ port: PORT }, function (err, address) {
-  if (err) {
-    fastify.log.error(err);
-    process.exit(1);
-  }
-  // Server is now listening on ${address}
-});
 
 export default fastify;
