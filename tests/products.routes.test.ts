@@ -57,7 +57,12 @@ describe("Rotas CRUD de produtos", () => {
   });
 
   it("lista produtos e envia filtros validados ao serviço", async () => {
-    vi.mocked(getProducts).mockResolvedValue([product]);
+    vi.mocked(getProducts).mockResolvedValue({
+      data: [product],
+      total: 1,
+      page: 2,
+      limit: 5,
+    });
 
     const response = await app.inject({
       method: "GET",
@@ -71,11 +76,17 @@ describe("Rotas CRUD de produtos", () => {
       limit: 5,
       active: true,
     });
-    expect(response.json()).toHaveLength(1);
-    expect(response.json()[0]).toMatchObject({
-      id: product.id,
-      name: product.name,
-      active: true,
+    expect(response.json()).toEqual({
+      data: [
+        expect.objectContaining({
+          id: product.id,
+          name: product.name,
+          active: true,
+        }),
+      ],
+      total: 1,
+      page: 2,
+      limit: 5,
     });
   });
 

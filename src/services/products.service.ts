@@ -27,7 +27,7 @@ const ensureCategoryExists = async (categoryId: number | undefined) => {
 export const getProducts = async (filter: ProductFiltersWithCategory) => {
     const {
         page: requestedPage = 1,
-        limit: requestedLimit = 20,
+        limit: requestedLimit = 10,
         minPrice,
         maxPrice,
         search,
@@ -67,12 +67,17 @@ export const getProducts = async (filter: ProductFiltersWithCategory) => {
         where.stock = inStock ? { gt: 0 } : { lte: 0 };
     }
 
-    return prisma.product.findMany({
-        where,
-        orderBy: { [sortBy]: sortOrder },
-        skip: (page - 1) * limit,
-        take: limit,
-    });
+    const [data, total] = await Promise.all([
+        prisma.product.findMany({
+            where,
+            orderBy: { [sortBy]: sortOrder },
+            skip: (page - 1) * limit,
+            take: limit,
+        }),
+        prisma.product.count({ where }),
+    ]);
+
+    return { data, total, page, limit };
 }
 
 export const getProductById = async (id: number) => {

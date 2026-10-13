@@ -24,34 +24,42 @@ export default async function productsRoutes(fastify: FastifyInstance) {
         security: [{ bearerAuth: [] }],
         response: {
           200: {
-            description: "Lista de produtos",
-            type: "array",
-            items: {
-              type: "object",
-              properties: {
-                id: { type: "number" },
-                name: { type: "string" },
-                price: { type: "number" },
-                createdAt: { type: "string", format: "date-time" },
-                color: { type: "string" },
-                description: { type: "string" },
-                stock: { type: "number" },
-                sizes: {
-                  type: "array",
-                  items: { type: "string" },
+            description: "Produtos e informações da paginação",
+            type: "object",
+            properties: {
+              data: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    id: { type: "number" },
+                    name: { type: "string" },
+                    price: { type: "number" },
+                    createdAt: { type: "string", format: "date-time" },
+                    color: { type: "string" },
+                    description: { type: "string" },
+                    stock: { type: "number" },
+                    sizes: {
+                      type: "array",
+                      items: { type: "string" },
+                    },
+                    images: {
+                      type: "array",
+                      items: { type: "string", format: "uri" },
+                    },
+                    colors: {
+                      type: "array",
+                      items: { type: "string" },
+                    },
+                    slug: { type: "string" },
+                    active: { type: "boolean" },
+                    updatedAt: { type: "string", format: "date-time" },
+                  },
                 },
-                images: {
-                  type: "array",
-                  items: { type: "string", format: "uri" },
-                },
-                colors: {
-                  type: "array",
-                  items: { type: "string" },
-                },
-                slug: { type: "string" },
-                active: { type: "boolean" },
-                updatedAt: { type: "string", format: "date-time" },
               },
+              total: { type: "number", description: "Total de produtos encontrados" },
+              page: { type: "number", description: "Página atual" },
+              limit: { type: "number", description: "Quantidade de produtos por página" },
             },
           },
         },
