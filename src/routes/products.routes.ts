@@ -71,6 +71,10 @@ export default async function productsRoutes(fastify: FastifyInstance) {
               type: "string",
               description: "Quantidade de produtos por página",
             },
+            categoryId: {
+              type: "string",
+              description: "Filtrar produtos pelo ID da categoria",
+            },
             minPrice: { type: "string", description: "Preço mínimo" },
             maxPrice: { type: "string", description: "Preço máximo" },
             search: { type: "string", description: "Termo de busca" },

@@ -39,6 +39,12 @@ export const productFiltersSchema = z
       .transform(Number)
       .pipe(z.number().int().min(1).max(100))
       .optional(),
+    categoryId: z
+      .string()
+      .regex(/^\d+$/, "ID da categoria deve ser um número inteiro")
+      .transform(Number)
+      .pipe(z.number().int().positive())
+      .optional(),
     minPrice: queryNumber.optional(),
     maxPrice: queryNumber.optional(),
     search: z.string().optional(),
