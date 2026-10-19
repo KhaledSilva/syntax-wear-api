@@ -13,6 +13,7 @@ import jwt from "@fastify/jwt";
 import authRoutes from "./routes/auth.routes";
 import ordersRoutes from "./routes/orders.routes";
 import { errorHandler } from "./middlewares/error.middleware";
+import fastifyCookie from "@fastify/cookie";
 
 const PORT = parseInt(process.env.PORT ?? "3000");
 
@@ -20,8 +21,15 @@ const fastify = Fastify({
   logger: true,
 });
 
+//permite manipular cookies nas requisições
+fastify.register(fastifyCookie);
+
 fastify.register(jwt, {
   secret: process.env.JWT_SECRET!,
+  cookie: {
+    cookieName: "syntaxwear.token",
+    signed: false, // Não estamos usando cookies assinados
+  }
 });
 
 fastify.register(cors, {
