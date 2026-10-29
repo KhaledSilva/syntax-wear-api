@@ -1,5 +1,6 @@
 import Fastify from "fastify";
 import jwt from "@fastify/jwt";
+import fastifyCookie from "@fastify/cookie";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { User } from "@prisma/client";
 import authRoutes from "../src/routes/auth.routes";
@@ -15,6 +16,7 @@ describe("POST /auth/login", () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
+    await app.register(fastifyCookie);
     await app.register(jwt, { secret: "test-jwt-secret" });
     await app.register(authRoutes, { prefix: "/auth" });
     await app.ready();
@@ -24,7 +26,7 @@ describe("POST /auth/login", () => {
     await app.close();
   });
 
-  it("returns a JWT when the credentials are valid", async () => {
+  it("Retorna o usuário e define um cookie JWT quando as credenciais são válidas", async () => {
     const user: User = {
       id: 42,
       firstName: "Teste",
@@ -53,11 +55,20 @@ describe("POST /auth/login", () => {
     expect(loginUser).toHaveBeenCalledWith({
       email: user.email,
       password: "senha-valida",
-    });
+    }, expect.anything());
 
-    const body = response.json<{ user: User; token: string }>();
+    const body = response.json<{ user: User }>();
     expect(body.user.id).toBe(user.id);
-    expect(app.jwt.verify<{ userId: number; role: string }>(body.token)).toMatchObject({
+    const setCookieHeader = response.headers["set-cookie"];
+    const cookie = Array.isArray(setCookieHeader) ? setCookieHeader[0] : setCookieHeader;
+    const tokenMatch = cookie?.match(/syntaxwear\.token=([^;]+)/);
+
+    expect(tokenMatch).not.toBeNull();
+    if (!tokenMatch) {
+      throw new Error("O cookie syntaxwear.token não foi retornado");
+    }
+
+    expect(app.jwt.verify<{ userId: number; role: string }>(tokenMatch[1])).toMatchObject({
       userId: user.id,
       role: user.role,
     });
