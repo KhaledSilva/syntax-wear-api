@@ -5,36 +5,36 @@ import bcrypt from "bcrypt";
 import { OAuth2Client } from "google-auth-library";
 
 export const registerUser = async (
-  paylaod: RegisterRequest,
+  payload: RegisterRequest,
   reply: FastifyReply,
 ) => {
   const existingUser = await prisma.user.findFirst({
     where: {
-      OR: [{ email: paylaod.email }, { cpf: paylaod.cpf }],
+      OR: [{ email: payload.email }, { cpf: payload.cpf }],
     },
   });
 
   if (existingUser) {
-    if (existingUser.email === paylaod.email) {
+    if (existingUser.email === payload.email) {
       return reply.status(409).send({ message: "E-mail já cadastrado" });
     }
 
-    if (existingUser.cpf === paylaod.cpf) {
+    if (existingUser.cpf === payload.cpf) {
       return reply.status(409).send({ message: "CPF já cadastrado" });
     }
   }
 
-  const hashedPassword = await bcrypt.hash(paylaod.password, 10);
+  const hashedPassword = await bcrypt.hash(payload.password, 10);
 
   const newUser = await prisma.user.create({
     data: {
-      firstName: paylaod.firstName,
-      lastName: paylaod.lastName,
-      email: paylaod.email,
+      firstName: payload.firstName,
+      lastName: payload.lastName,
+      email: payload.email,
       password: hashedPassword,
-      cpf: paylaod.cpf,
-      birthDate: paylaod.birthDate ? new Date(paylaod.birthDate) : undefined,
-      phone: paylaod.phone,
+      cpf: payload.cpf,
+      birthDate: payload.birthDate ? new Date(payload.birthDate) : undefined,
+      phone: payload.phone,
       role: "USER",
     },
     select: {
