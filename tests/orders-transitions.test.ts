@@ -14,6 +14,7 @@ type MockOrder = {
 };
 
 type MockTransaction = {
+  $queryRaw: (...args: unknown[]) => Promise<unknown>;
   order: {
     findFirst: (args: {
       where: { id: number; userId?: number };
@@ -38,6 +39,7 @@ const originalTransactionDescriptor = Object.getOwnPropertyDescriptor(
 
 const setupMockTransaction = () => {
   const transaction: MockTransaction = {
+    $queryRaw: async () => [],
     order: {
       findFirst: async ({ where }) =>
         where.id === order.id &&

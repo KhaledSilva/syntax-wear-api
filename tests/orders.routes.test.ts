@@ -30,6 +30,7 @@ const order = {
   userId: 2,
   total: new Prisma.Decimal(179.8),
   status: "PENDING" as const,
+  paymentStatus: "NOT_STARTED" as const,
   shippingAddress: {
     cep: "01001-000",
     street: "Praça da Sé",
@@ -39,6 +40,7 @@ const order = {
     state: "SP",
     country: "Brasil",
   },
+  shippingCost: new Prisma.Decimal(0),
   paymentMethod: "PIX",
   createdAt: new Date("2026-01-01T00:00:00.000Z"),
   updatedAt: new Date("2026-01-01T00:00:00.000Z"),
@@ -57,6 +59,7 @@ const createOrderPayload = {
     country: "Brasil",
   },
   paymentMethod: "PIX",
+  shippingCost: 0,
 };
 
 describe("Rotas CRUD de pedidos", () => {
@@ -132,12 +135,19 @@ describe("Rotas CRUD de pedidos", () => {
     const response = await app.inject({
       method: "POST",
       url: "/orders",
-      headers: { authorization: `Bearer ${userToken}` },
+      headers: {
+        authorization: `Bearer ${userToken}`,
+        "idempotency-key": "order-retry-1",
+      },
       payload: createOrderPayload,
     });
 
     expect(response.statusCode).toBe(201);
-    expect(createOrder).toHaveBeenCalledWith(order.userId, createOrderPayload);
+    expect(createOrder).toHaveBeenCalledWith(
+      order.userId,
+      createOrderPayload,
+      "order-retry-1",
+    );
     expect(response.json()).toMatchObject({
       id: order.id,
       userId: order.userId,
@@ -145,11 +155,51 @@ describe("Rotas CRUD de pedidos", () => {
     });
   });
 
+  it("exige Idempotency-Key para criar um pedido", async () => {
+    const response = await app.inject({
+      method: "POST",
+      url: "/orders",
+      payload: createOrderPayload,
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(createOrder).not.toHaveBeenCalled();
+  });
+
+  it("aceita produtos repetidos para que o serviço consolide as quantidades", async () => {
+    vi.mocked(createOrder).mockResolvedValue(order);
+    const payload = {
+      ...createOrderPayload,
+      items: [
+        { productId: 5, quantity: 1, size: "M" },
+        { productId: 5, quantity: 2, size: "M" },
+      ],
+    };
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/orders",
+      headers: {
+        authorization: `Bearer ${userToken}`,
+        "idempotency-key": "order-repeated-products",
+      },
+      payload,
+    });
+
+    expect(response.statusCode).toBe(201);
+    expect(createOrder).toHaveBeenCalledWith(
+      order.userId,
+      payload,
+      "order-repeated-products",
+    );
+  });
+
   it.each([
     ["items", { ...createOrderPayload, items: undefined }],
     ["ao menos um item", { ...createOrderPayload, items: [] }],
     ["shippingAddress", { ...createOrderPayload, shippingAddress: undefined }],
     ["paymentMethod", { ...createOrderPayload, paymentMethod: undefined }],
+    ["shippingCost", { ...createOrderPayload, shippingCost: undefined }],
     [
       "productId do item",
       { ...createOrderPayload, items: [{ productId: undefined, quantity: 2, size: "M" }] },
@@ -178,7 +228,10 @@ describe("Rotas CRUD de pedidos", () => {
     const response = await app.inject({
       method: "POST",
       url: "/orders",
-      headers: { authorization: `Bearer ${userToken}` },
+      headers: {
+        authorization: `Bearer ${userToken}`,
+        "idempotency-key": "order-invalid-1",
+      },
       payload,
     });
 

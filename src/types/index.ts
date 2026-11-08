@@ -85,6 +85,7 @@ export interface CreateOrder {
         state: string;
         country: string;
     };
+    shippingCost: number;
     paymentMethod: string;
 }
 

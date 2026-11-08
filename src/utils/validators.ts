@@ -123,8 +123,16 @@ export const deleteCategorySchema = z.object({
         .array(
           z
             .object({
-              productId: z.number().int().positive("Produto inválido"),
-              quantity: z.number().int().positive("Quantidade deve ser um inteiro positivo"),
+              productId: z
+                .number()
+                .int()
+                .positive("Produto inválido")
+                .max(2_147_483_647, "Produto inválido"),
+              quantity: z
+                .number()
+                .int()
+                .positive("Quantidade deve ser um inteiro positivo")
+                .max(2_147_483_647, "Quantidade excede o limite permitido"),
               size: z.string().min(1, "Tamanho é obrigatório"),
             })
             .strict(),
@@ -143,21 +151,13 @@ export const deleteCategorySchema = z.object({
         })
         .strict(),
       paymentMethod: z.string().trim().min(1, "Método de pagamento é obrigatório").max(100),
+      shippingCost: z
+        .number()
+        .finite()
+        .nonnegative("Frete deve ser um valor válido e não negativo")
+        .max(Number.MAX_SAFE_INTEGER / 100, "Frete excede o limite permitido"),
     })
-    .strict()
-    .superRefine(({ items }, context) => {
-      const productIds = new Set<number>();
-      items.forEach(({ productId }, index) => {
-        if (productIds.has(productId)) {
-          context.addIssue({
-            code: "custom",
-            message: "Cada produto deve aparecer uma única vez no pedido",
-            path: ["items", index, "productId"],
-          });
-        }
-        productIds.add(productId);
-      });
-    });
+    .strict();
 
   export const updateOrderSchema = z
     .object({
@@ -177,19 +177,4 @@ export const deleteCategorySchema = z.object({
         shippingAddress !== undefined ||
         paymentMethod !== undefined,
       { message: "Informe ao menos um campo para atualizar o pedido" },
-    )
-    .superRefine(({ items }, context) => {
-      if (!items) return;
-
-      const productIds = new Set<number>();
-      items.forEach(({ productId }, index) => {
-        if (productIds.has(productId)) {
-          context.addIssue({
-            code: "custom",
-            message: "Cada produto deve aparecer uma única vez no pedido",
-            path: ["items", index, "productId"],
-          });
-        }
-        productIds.add(productId);
-      });
-    });
+    );

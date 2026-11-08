@@ -97,11 +97,13 @@ Produtos e categorias exigem autenticação em todas as rotas; operações de es
 | `GET` | `/categories/:id` | Consulta categoria |
 | `POST` | `/categories` | Cria categoria (`ADMIN`) |
 | `PUT`, `DELETE` | `/categories/:id` | Atualiza ou desativa categoria (`ADMIN`) |
-| `POST` | `/orders` | Cria pedido para o usuário autenticado |
+| `POST` | `/orders` | Cria pedido para o usuário autenticado; requer `Idempotency-Key` |
 | `GET` | `/orders` | Lista pedidos próprios; `ADMIN` lista todos |
 | `GET`, `PUT`, `DELETE` | `/orders/:id` | Consulta, atualiza ou solicita cancelamento |
 
-Para `/products`, filtros disponíveis: `page`, `limit` (máximo 100), `categoryId`, `minPrice`, `maxPrice`, `search`, `color`, `size`, `active`, `inStock`, `sortBy` e `sortOrder`. Pedidos começam em `PENDING`; apenas `ADMIN` pode executar transições operacionais (`CONFIRMED`, `PAID`, `SHIPPED`, `DELIVERED`). Compradores podem cancelar pedidos não pagos. A alteração dos demais dados do pedido só é permitida enquanto pendente. Não há integração de pagamento ou envio implementada.
+Para `/products`, filtros disponíveis: `page`, `limit` (máximo 100), `categoryId`, `minPrice`, `maxPrice`, `search`, `color`, `size`, `active`, `inStock`, `sortBy` e `sortOrder`. A criação de pedidos exige `Idempotency-Key` e `shippingCost`; o backend usa o preço do produto no banco e reserva o estoque por 30 minutos dentro da transação. Repetir a mesma chave e os mesmos dados retorna o pedido original; reutilizar a chave com dados diferentes resulta em `409`.
+
+Pedidos começam em `PENDING`; apenas `ADMIN` pode executar transições operacionais (`CONFIRMED`, `PAID`, `SHIPPED`, `DELIVERED`). Compradores podem cancelar pedidos não pagos quando não há pagamento em processamento. A alteração dos demais dados do pedido só é permitida enquanto pendente e antes de iniciar o pagamento. `expireOrderReservations()` libera reservas vencidas sem pagamento iniciado ou com sessão confirmada como expirada; deve ser acionada por um agendador externo. Reservas com pagamento em processamento ou falha ainda não expirada são mantidas até a integração confirmar o estado final do provedor. Checkout Stripe, webhook e agendador automático ainda não estão integrados.
 
 As rotas autenticadas usam o cookie `syntaxwear.token`, definido no cadastro e login.
 
@@ -112,7 +114,7 @@ O schema Prisma define `User`, `Product`, `Category`, `Order` e `OrderItem`. Pro
 ## Testes
 
 ```bash
-npm test                 # Testes de transição de status dos pedidos
+npm test                 # Suíte completa
 npm run test:auth         # Rotas de autenticação
 npm run test:products     # Rotas de produtos
 npm run test:categories   # Rotas de categorias

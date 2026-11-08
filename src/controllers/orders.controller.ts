@@ -19,9 +19,14 @@ export const createNewOrder = async (
   reply: FastifyReply,
 ) => {
   const data = createOrderSchema.parse(request.body);
+  const idempotencyKey = request.headers["idempotency-key"];
 
   try {
-    const order = await createOrder(request.user.userId, data);
+    if (typeof idempotencyKey !== "string") {
+      return reply.status(400).send({ message: "Header Idempotency-Key é obrigatório" });
+    }
+
+    const order = await createOrder(request.user.userId, data, idempotencyKey);
     return reply.status(201).send(order);
   } catch (error) {
     if (error instanceof OrderServiceError) {

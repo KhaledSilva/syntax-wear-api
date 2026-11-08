@@ -14,7 +14,7 @@ model User {
   password     String
   cpf          String?   @unique
   phone        String?
-  birthDate    DateTime? 
+  birthDate    DateTime?
   createdAt    DateTime  @default(now())
   role         Role      @default(USER)
   orders       Order[]
@@ -30,7 +30,7 @@ model Product {
   name        String
   slug        String      @unique
   description String?
-  price       Decimal     
+  price       Decimal
   images      Json?
   sizes       Json?
   colors      String[]    @default([])
@@ -55,19 +55,29 @@ model Category {
 }
 
 model Order {
-  id              Int         @id @default(autoincrement())
-  userId          Int
-  total           Decimal
-  status          OrderStatus @default(PENDING)
-  shippingAddress Json
-  paymentMethod   String
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
-  user            User        @relation(fields: [userId], references: [id], onDelete: Restrict)
-  items           OrderItem[]
+  id                     Int                    @id @default(autoincrement())
+  userId                 Int
+  total                  Decimal
+  status                 OrderStatus            @default(PENDING)
+  paymentStatus          PaymentStatus          @default(NOT_STARTED)
+  stockReservationStatus StockReservationStatus @default(RELEASED)
+  reservationExpiresAt   DateTime?
+  idempotencyKey         String?
+  idempotencyScope       String                 @default("orders:create")
+  idempotencyHash        String?
+  paymentSessionId       String?                @unique
+  shippingAddress        Json
+  shippingCost           Decimal?               @map("shipping_cost")
+  paymentMethod          String
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime               @updatedAt
+  user                   User                   @relation(fields: [userId], references: [id], onDelete: Restrict)
+  items                  OrderItem[]
 
+  @@unique([userId, idempotencyScope, idempotencyKey])
   @@index([userId, createdAt])
   @@index([status])
+  @@index([status, paymentStatus, stockReservationStatus, reservationExpiresAt])
 }
 
 model OrderItem {
@@ -92,4 +102,18 @@ enum OrderStatus {
   SHIPPED
   DELIVERED
   CANCELLED
+}
+
+enum PaymentStatus {
+  NOT_STARTED
+  PROCESSING
+  SUCCEEDED
+  FAILED
+  EXPIRED
+}
+
+enum StockReservationStatus {
+  RESERVED
+  CONSUMED
+  RELEASED
 }

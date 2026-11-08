@@ -38,7 +38,7 @@ const errorResponses = {
     },
   },
   409: {
-    description: "Transição inválida, pedido não pendente ou produto indisponível",
+    description: "Transição inválida, produto indisponível ou Idempotency-Key reutilizada com dados diferentes",
     type: "object",
     properties: {
       message: { type: "string" },
@@ -54,18 +54,33 @@ const errorResponses = {
 };
 
 export default async function ordersRoutes(fastify: FastifyInstance) {
-  fastify.post<{ Body: CreateOrder }>(
+  fastify.post<{
+    Body: CreateOrder;
+    Headers: { "idempotency-key": string };
+  }>(
     "/",
     {
       preHandler: authenticate,
       schema: {
         tags: ["Orders"],
-        description: "Cria um pedido para o usuário autenticado",
+        description: "Cria um pedido para o usuário autenticado; requer Idempotency-Key para proteger retries",
         security: [{ bearerAuth: [] }],
+        headers: {
+          type: "object",
+          required: ["idempotency-key"],
+          properties: {
+            "idempotency-key": {
+              type: "string",
+              minLength: 1,
+              maxLength: 255,
+              description: "Chave única por usuário e operação para repetição segura",
+            },
+          },
+        },
         body: {
           type: "object",
           additionalProperties: false,
-          required: ["items", "shippingAddress", "paymentMethod"],
+          required: ["items", "shippingAddress", "paymentMethod", "shippingCost"],
           properties: {
             items: {
               type: "array",
@@ -75,8 +90,8 @@ export default async function ordersRoutes(fastify: FastifyInstance) {
                 additionalProperties: false,
                 required: ["productId", "quantity", "size"],
                 properties: {
-                  productId: { type: "integer", minimum: 1 },
-                  quantity: { type: "integer", minimum: 1 },
+                  productId: { type: "integer", minimum: 1, maximum: 2147483647 },
+                  quantity: { type: "integer", minimum: 1, maximum: 2147483647 },
                   size: { type: "string", minLength: 1, description: "Tamanho do produto" },
                 },
               },
@@ -97,6 +112,11 @@ export default async function ordersRoutes(fastify: FastifyInstance) {
               },
             },
             paymentMethod: { type: "string", minLength: 1 },
+            shippingCost: {
+              type: "number",
+              minimum: 0,
+              maximum: Number.MAX_SAFE_INTEGER / 100,
+            },
           },
         },
         response: {
@@ -144,8 +164,8 @@ export default async function ordersRoutes(fastify: FastifyInstance) {
                 additionalProperties: false,
                 required: ["productId", "quantity", "size"],
                 properties: {
-                  productId: { type: "integer", minimum: 1 },
-                  quantity: { type: "integer", minimum: 1 },
+                  productId: { type: "integer", minimum: 1, maximum: 2147483647 },
+                  quantity: { type: "integer", minimum: 1, maximum: 2147483647 },
                   size: { type: "string", minLength: 1 },
                 },
               },

@@ -1,7 +1,4 @@
-// Require the framework and instantiate it
-
-// ESM
-import Fastify, { FastifyError } from "fastify";
+import Fastify from "fastify";
 import "dotenv/config";
 import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
@@ -12,6 +9,7 @@ import scalar from "@scalar/fastify-api-reference";
 import jwt from "@fastify/jwt";
 import authRoutes from "./routes/auth.routes";
 import ordersRoutes from "./routes/orders.routes";
+import stripeRoutes from "./routes/stripe.routes";
 import { errorHandler } from "./middlewares/error.middleware";
 import fastifyCookie from "@fastify/cookie";
 
@@ -21,14 +19,13 @@ const fastify = Fastify({
   logger: true,
 });
 
-//permite manipular cookies nas requisições
 fastify.register(fastifyCookie);
 
 fastify.register(jwt, {
   secret: process.env.JWT_SECRET!,
   cookie: {
     cookieName: "syntaxwear.token",
-    signed: false, // Não estamos usando cookies assinados
+    signed: false, 
   }
 });
 
@@ -74,8 +71,8 @@ fastify.register(productRoutes, { prefix: "/products" });
 fastify.register(categoriesRoutes, { prefix: "/categories" });
 fastify.register(authRoutes, { prefix: "/auth" });
 fastify.register(ordersRoutes, { prefix: "/orders" });
+fastify.register(stripeRoutes, { prefix: "/stripe" });
 
-// Declare a route
 fastify.get("/", async (request, reply) => {
   return {
     message: "E-commerce Syntax",
