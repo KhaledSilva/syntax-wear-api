@@ -99,16 +99,21 @@ export default async function ordersRoutes(fastify: FastifyInstance) {
             shippingAddress: {
               type: "object",
               additionalProperties: false,
-              required: ["cep", "street", "number", "neighborhood", "city", "state", "country"],
+              required: ["cep", "street", "number", "neighborhood", "city", "state"],
               properties: {
                 cep: { type: "string" },
                 street: { type: "string" },
-                number: { type: "string" },
+                number: {
+                  anyOf: [
+                    { type: "string", minLength: 1, maxLength: 100 },
+                    { type: "number", exclusiveMinimum: 0 },
+                  ],
+                  description: "Número do endereço, como 1024, 125-A ou S/N",
+                },
                 complement: { type: "string" },
                 neighborhood: { type: "string" },
                 city: { type: "string" },
                 state: { type: "string" },
-                country: { type: "string" },
               },
             },
             paymentMethod: { type: "string", minLength: 1 },
@@ -176,12 +181,17 @@ export default async function ordersRoutes(fastify: FastifyInstance) {
               properties: {
                 cep: { type: "string" },
                 street: { type: "string" },
-                number: { type: "string" },
+                number: {
+                  anyOf: [
+                    { type: "string", minLength: 1, maxLength: 100 },
+                    { type: "number", exclusiveMinimum: 0 },
+                  ],
+                  description: "Número do endereço, como 1024, 125-A ou S/N",
+                },
                 complement: { type: "string" },
                 neighborhood: { type: "string" },
                 city: { type: "string" },
                 state: { type: "string" },
-                country: { type: "string" },
               },
             },
             paymentMethod: { type: "string", minLength: 1 },

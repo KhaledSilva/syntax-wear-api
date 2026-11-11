@@ -1,5 +1,5 @@
 import { prisma } from "../utils/prisma"
-import { CreateProduct, ProductFilters } from "../types"
+import { CreateProduct, ProductFilters, ProductWriteInput } from "../types"
 
 type ProductCategoryInput = {
     categoryId?: number;
@@ -94,7 +94,7 @@ export const getProductById = async (id: number) => {
     return product;
 }
 
-export const createProduct = async (data: CreateProduct & ProductCategoryInput) => {
+export const createProduct = async (data: ProductWriteInput & ProductCategoryInput) => {
     const existingProduct = await prisma.product.findUnique({
         where: { slug: data.slug },
     });
@@ -119,7 +119,7 @@ export const createProduct = async (data: CreateProduct & ProductCategoryInput) 
     return newProduct;
 }
 
-export const updateProduct = async (id: number, data: Partial<CreateProduct> & ProductCategoryInput) => {
+export const updateProduct = async (id: number, data: Partial<ProductWriteInput> & ProductCategoryInput) => {
     const existingProduct = await prisma.product.findUnique({
         where: { id },
     });

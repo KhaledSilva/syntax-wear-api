@@ -19,6 +19,8 @@ const fastify = Fastify({
   logger: true,
 });
 
+fastify.setErrorHandler(errorHandler);
+
 fastify.register(fastifyCookie);
 
 fastify.register(jwt, {
@@ -87,7 +89,5 @@ fastify.get("/health", async (request, reply) => {
     timestamp: new Date().toISOString(),
   };
 });
-
-fastify.setErrorHandler(errorHandler);
 
 export default fastify;

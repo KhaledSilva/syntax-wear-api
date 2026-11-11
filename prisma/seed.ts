@@ -62,7 +62,7 @@ const products = [
 		slug: "camiseta-urban-code",
 		description:
 			"Camiseta de algodão com modelagem confortável e estampa minimalista.",
-		price: 79.9,
+		price: "79.90",
 		images: [],
 		sizes: ["P", "M", "G", "GG"],
 		colors: ["Preto", "Branco", "Cinza"],
@@ -75,7 +75,7 @@ const products = [
 		slug: "camiseta-dark-mode",
 		description:
 			"Camiseta preta com visual moderno e acabamento confortável.",
-		price: 89.9,
+		price: "89.90",
 		images: [],
 		sizes: ["P", "M", "G", "GG"],
 		colors: ["Preto", "Verde"],
@@ -88,7 +88,7 @@ const products = [
 		slug: "camiseta-minimal",
 		description:
 			"Camiseta básica com design minimalista para diferentes ocasiões.",
-		price: 69.9,
+		price: "69.90",
 		images: [],
 		sizes: ["P", "M", "G", "GG"],
 		colors: ["Branco", "Azul", "Preto"],
@@ -101,7 +101,7 @@ const products = [
 		slug: "moletom-dev-club",
 		description:
 			"Moletom confortável com capuz e bolso frontal.",
-		price: 189.9,
+		price: "189.90",
 		images: [],
 		sizes: ["P", "M", "G", "GG"],
 		colors: ["Preto", "Cinza"],
@@ -114,7 +114,7 @@ const products = [
 		slug: "moletom-night-shift",
 		description:
 			"Moletom pesado e confortável para os dias mais frios.",
-		price: 219.9,
+		price: "219.90",
 		images: [],
 		sizes: ["M", "G", "GG"],
 		colors: ["Preto", "Marrom"],
@@ -127,7 +127,7 @@ const products = [
 		slug: "calca-cargo-tech",
 		description:
 			"Calça cargo com bolsos laterais e tecido resistente.",
-		price: 199.9,
+		price: "199.90",
 		images: [],
 		sizes: ["36", "38", "40", "42", "44"],
 		colors: ["Preto", "Verde Militar"],
@@ -140,7 +140,7 @@ const products = [
 		slug: "calca-jogger-essential",
 		description:
 			"Calça jogger confortável para um visual casual.",
-		price: 159.9,
+		price: "159.90",
 		images: [],
 		sizes: ["P", "M", "G", "GG"],
 		colors: ["Preto", "Cinza"],
@@ -153,7 +153,7 @@ const products = [
 		slug: "jaqueta-explorer",
 		description:
 			"Jaqueta leve para dias frios e atividades ao ar livre.",
-		price: 279.9,
+		price: "279.90",
 		images: [],
 		sizes: ["P", "M", "G", "GG"],
 		colors: ["Preto", "Azul-marinho"],
@@ -166,7 +166,7 @@ const products = [
 		slug: "jaqueta-street",
 		description:
 			"Jaqueta urbana com fechamento em zíper e design moderno.",
-		price: 249.9,
+		price: "249.90",
 		images: [],
 		sizes: ["M", "G", "GG"],
 		colors: ["Preto", "Bege"],
@@ -179,7 +179,7 @@ const products = [
 		slug: "shorts-performance",
 		description:
 			"Shorts leve e confortável para atividades físicas.",
-		price: 99.9,
+		price: "99.90",
 		images: [],
 		sizes: ["P", "M", "G", "GG"],
 		colors: ["Preto", "Cinza"],
@@ -192,7 +192,7 @@ const products = [
 		slug: "shorts-casual",
 		description:
 			"Shorts casual com tecido leve para o dia a dia.",
-		price: 89.9,
+		price: "89.90",
 		images: [],
 		sizes: ["P", "M", "G", "GG"],
 		colors: ["Bege", "Preto", "Verde"],
@@ -205,7 +205,7 @@ const products = [
 		slug: "bone-classic",
 		description:
 			"Boné clássico com ajuste traseiro e logo frontal.",
-		price: 59.9,
+		price: "59.90",
 		images: [],
 		sizes: ["Único"],
 		colors: ["Preto", "Branco"],
@@ -218,7 +218,7 @@ const products = [
 		slug: "bone-street",
 		description:
 			"Boné urbano com visual moderno e fechamento ajustável.",
-		price: 69.9,
+		price: "69.90",
 		images: [],
 		sizes: ["Único"],
 		colors: ["Preto", "Verde"],
@@ -231,7 +231,7 @@ const products = [
 		slug: "meias-everyday",
 		description:
 			"Kit com três pares de meias confortáveis para o dia a dia.",
-		price: 39.9,
+		price: "39.90",
 		images: [],
 		sizes: ["Único"],
 		colors: ["Preto", "Branco", "Cinza"],
@@ -307,10 +307,12 @@ async function main() {
 			},
 			update: {
 				...productData,
+				price: new Prisma.Decimal(productData.price),
 				categoryId: category.id,
 			},
 			create: {
 				...productData,
+				price: new Prisma.Decimal(productData.price),
 				categoryId: category.id,
 			},
 		});

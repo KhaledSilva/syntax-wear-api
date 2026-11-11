@@ -1,3 +1,5 @@
+import type { Prisma } from "@prisma/client";
+
 export interface ProductFilters {
   page?: number;
   limit?: number;
@@ -29,7 +31,7 @@ export interface RegisterRequest extends AuthRequest {
 export interface CreateProduct {
     name: string;
     description: string;
-    price: number;
+    price: string;
     categoryId: number;
     colors?: string[];
     sizes?: string[];
@@ -38,6 +40,10 @@ export interface CreateProduct {
     active: boolean;
     images?: string[];
 }
+
+export type ProductWriteInput = Omit<CreateProduct, "price"> & {
+    price: Prisma.Decimal;
+};
 
 export interface CreateCategory {
     name: string;
@@ -52,7 +58,7 @@ export interface UpdateCategory extends Partial<CreateCategory> {
 export interface UpdateProduct extends Partial<CreateProduct> {
     name?: string;
     description?: string;
-    price?: number;
+    price?: string;
     slug?: string;
     stock?: number;
     active?: boolean;
@@ -83,7 +89,6 @@ export interface CreateOrder {
         neighborhood: string;
         city: string;
         state: string;
-        country: string;
     };
     shippingCost: number;
     paymentMethod: string;

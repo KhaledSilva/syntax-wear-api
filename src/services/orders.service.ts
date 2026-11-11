@@ -281,7 +281,6 @@ const shippingAddressData = (shippingAddress: CreateOrder["shippingAddress"]) =>
   neighborhood: shippingAddress.neighborhood,
   city: shippingAddress.city,
   state: shippingAddress.state,
-  country: shippingAddress.country,
 });
 
 const mergeShippingAddress = (

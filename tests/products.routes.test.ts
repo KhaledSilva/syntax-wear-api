@@ -129,7 +129,7 @@ describe("Rotas CRUD de produtos", () => {
       payload: {
         name: "Camiseta Básica",
         description: "Camiseta de algodão",
-        price: 89.9,
+        price: "89.90",
         categoryId: 3,
         active: true,
         stock: 12,
@@ -144,6 +144,7 @@ describe("Rotas CRUD de produtos", () => {
         name: "Camiseta Básica",
         slug: "camiseta-basica",
         categoryId: 3,
+        price: new Prisma.Decimal("89.90"),
       }),
     );
     expect(response.json()).toEqual({ message: "Produto criado com sucesso" });
@@ -156,14 +157,14 @@ describe("Rotas CRUD de produtos", () => {
       method: "PUT",
       url: `/products/${product.id}`,
       headers: { authorization: `Bearer ${adminToken}` },
-      payload: { name: "Camiseta Nova", price: 99 },
+      payload: { name: "Camiseta Nova", price: "99.00" },
     });
 
     expect(response.statusCode).toBe(200);
     expect(updateProduct).toHaveBeenCalledWith(product.id, {
       name: "Camiseta Nova",
       slug: "camiseta-nova",
-      price: 99,
+      price: new Prisma.Decimal("99.00"),
     });
     expect(response.json()).toMatchObject({ id: product.id });
   });
@@ -190,7 +191,7 @@ describe("Rotas CRUD de produtos", () => {
       payload: {
         name: "Camiseta Básica",
         description: "Camiseta de algodão",
-        price: 89.9,
+        price: "89.90",
         categoryId: 3,
         active: true,
         stock: 12,

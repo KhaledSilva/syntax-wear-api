@@ -56,7 +56,6 @@ const createOrderPayload = {
     neighborhood: "Sé",
     city: "São Paulo",
     state: "SP",
-    country: "Brasil",
   },
   paymentMethod: "PIX",
   shippingCost: 0,
@@ -213,7 +212,7 @@ describe("Rotas CRUD de pedidos", () => {
       { ...createOrderPayload, items: [{ productId: 5, quantity: 2, size: undefined }] },
     ],
     ...(
-      ["cep", "street", "number", "neighborhood", "city", "state", "country"] as const
+      ["cep", "street", "number", "neighborhood", "city", "state"] as const
     ).map((field) => [
       `${field} do endereço`,
       {

@@ -1,4 +1,5 @@
 import z from "zod";
+import { Prisma } from "@prisma/client";
 
 export const loginSchema = z.object({
     email: z.email("Email inválido"),
@@ -64,11 +65,17 @@ export const productFiltersSchema = z
     },
   );
 
+const productPriceSchema = z
+  .string()
+  .regex(/^\d+(?:\.\d{1,2})?$/, "Preço deve ser uma string decimal com até duas casas")
+  .transform((value) => new Prisma.Decimal(value))
+  .refine((value) => value.greaterThan(0), "Preço deve ser um número positivo");
+
 export const createProductSchema = z
   .object({
     name: z.string().min(1, "Nome é obrigatório"),
     description: z.string().min(1, "Descrição é obrigatória"),
-    price: z.number().positive("Preço deve ser um número positivo"),
+    price: productPriceSchema,
     categoryId: z.number().int().positive("Categoria inválida"),
     colors: z.array(z.string()).optional(),
     sizes: z.array(z.string()).optional(),
@@ -99,7 +106,7 @@ export const deleteCategorySchema = z.object({
   .object({
     name: z.string().min(1, "Nome é obrigatório").optional(),
     description: z.string().min(1, "Descrição é obrigatória").optional(),
-    price: z.number().positive("Preço deve ser um número positivo").optional(),
+    price: productPriceSchema.optional(),
     categoryId: z.number().int().positive("Categoria inválida").optional(),
     colors: z.array(z.string()).optional(),
     sizes: z.array(z.string()).optional(),
@@ -116,6 +123,27 @@ export const deleteCategorySchema = z.object({
   export const orderIdSchema = z.object({
     id: z.coerce.number().int().positive("ID do pedido inválido"),
   });
+
+  const addressNumberStringSchema = z
+    .string()
+    .trim()
+    .min(1, "Número do endereço é obrigatório")
+    .max(100, "Número do endereço excede o limite permitido")
+    .regex(
+      /^[\p{L}\p{N}]+(?:[./ -][\p{L}\p{N}]+)*$/u,
+      "Número do endereço inválido",
+    )
+    .refine(
+      (value) => /\p{N}/u.test(value) || /^s\/?n$/iu.test(value),
+      "Número do endereço deve conter números ou ser S/N",
+    );
+
+  const addressNumberSchema = z
+    .union([
+      addressNumberStringSchema,
+      z.number().finite().positive("Número do endereço inválido"),
+    ])
+    .transform(String);
 
   export const createOrderSchema = z
     .object({
@@ -142,12 +170,11 @@ export const deleteCategorySchema = z.object({
         .object({
           cep: z.string().trim().min(1, "CEP é obrigatório").max(20),
           street: z.string().trim().min(1, "Rua é obrigatória").max(200),
-          number: z.string().trim().min(1, "Número é obrigatório").max(30),
+          number: addressNumberSchema,
           complement: z.string().trim().max(200).optional(),
           neighborhood: z.string().trim().min(1, "Bairro é obrigatório").max(100),
           city: z.string().trim().min(1, "Cidade é obrigatória").max(100),
           state: z.string().trim().min(1, "Estado é obrigatório").max(100),
-          country: z.string().trim().min(1, "País é obrigatório").max(100),
         })
         .strict(),
       paymentMethod: z.string().trim().min(1, "Método de pagamento é obrigatório").max(100),

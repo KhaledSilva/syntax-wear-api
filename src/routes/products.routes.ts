@@ -184,7 +184,7 @@ export default async function productsRoutes(fastify: FastifyInstance) {
           properties: {
             name: { type: "string" },
             description: { type: "string" },
-            price: { type: "number" },
+            price: { type: "string", pattern: "^\\d+(?:\\.\\d{1,2})?$" },
             categoryId: { type: "integer", minimum: 1 },
             active: { type: "boolean" },
             stock: { type: "number" },
@@ -226,7 +226,7 @@ export default async function productsRoutes(fastify: FastifyInstance) {
           properties: {
             name: { type: "string" },
             description: { type: "string" },
-            price: { type: "number" },
+            price: { type: "string", pattern: "^\\d+(?:\\.\\d{1,2})?$" },
             categoryId: { type: "number" },
             active: { type: "boolean" },
             stock: { type: "number" },
