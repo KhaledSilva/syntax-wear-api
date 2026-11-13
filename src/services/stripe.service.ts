@@ -12,6 +12,7 @@ interface OrderItem {
 
 interface CreateStripeCheckoutServiceRequest {
   userId: number;
+  orderId: number;
   idempotencyKey: string;
   products: OrderItem[];
   shippingCost: Prisma.Decimal | number;
@@ -63,6 +64,7 @@ const toStripeAmount = (amount: Prisma.Decimal, description: string) => {
 
 export const createStripeCheckoutService = async ({
   userId,
+  orderId,
   idempotencyKey,
   products,
   shippingCost,
@@ -111,6 +113,9 @@ export const createStripeCheckoutService = async ({
     {
       payment_method_types: ["card"],
       mode: "payment",
+      metadata: {
+        orderId,
+      },
       line_items: lineItems,
       success_url: successUrl,
       cancel_url: cancelUrl,

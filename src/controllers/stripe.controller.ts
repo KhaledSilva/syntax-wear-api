@@ -101,6 +101,7 @@ export class StripeController {
       checkoutStage = "criação da sessão Stripe";
       const { sessionId } = await createStripeCheckoutService({
         userId: request.user.userId,
+        orderId: order.id,
         idempotencyKey,
         products: order.items.map((item) => ({
           id: item.productId,
